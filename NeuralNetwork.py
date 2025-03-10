@@ -9,10 +9,11 @@ class NNetwork :
     # Probably disimpan sebagai semacam list of lists, dimana satu NNetwork terdiri dari X lists dimana masing2 list
     # Ialah suatu layer tersendiri
     # Lalu satu node direpresentasikan dengan list of weights ke arah kanan?
-    def __init__(self, activation : str = "sigmoid"):
+    def __init__(self, activation : str = "sigmoid", verbose = False):
         self.layers : list[list[NNode]] = []
         self.bias : list[list[float]]
         self.activation = activation
+        self.verbose = verbose
     
     def activate(self,tempresult : list[float]):
         if self.activation == "sigmoid" :
@@ -22,6 +23,8 @@ class NNetwork :
             pass
         else :
             raise Exception("Undefined activation method")
+        if (self.verbose) :
+                print(tempresult)
         
     def getLayerCount(self):
         return len(self.layers)
@@ -105,6 +108,8 @@ class NNetwork :
             
             # EXPORT TO IMAGE OR SOMETHING FOR TRUE VALUES HERE OR SMTHN
             # activate
+            if (self.verbose) :
+                print(result,"==>",end=" ")
             self.activate(result)
             
             finalResult = result
