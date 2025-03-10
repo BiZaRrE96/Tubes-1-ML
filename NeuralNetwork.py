@@ -33,6 +33,20 @@ class NNetwork :
         if (idx == -1) : #Set index to last if unsupplied
             idx = len(self.layers)
         self.layers[layer].insert(idx,NNode(weights=weights))
+        
+    def popNode(self, layer : int, idx : int):
+        l = self.getLayer(layer)
+        if idx >= len(l):
+            raise IndexError
+        
+        # Iterate for every layer before it if exists
+        if (layer > 0 and layer < self.getLayerCount()):
+            # cleanse layer-1
+            for i in range(len(self.getLayer(layer-1))):
+                #For every node in layer-1
+                self.layers[layer-1][i].weights.pop(idx)
+        
+        self.layers[layer].pop(idx)
             
     # See asserts in calc, this tries to prevents those from happening
     # misalnya ada layer baru atau geser2, ini harus di handle juga sih nanti
