@@ -1,9 +1,11 @@
+import numpy as np
 from math import pow, exp
 
 class NNode :
     def __init__(self, weights : list[float] = []):
         self.id = 0
-        self.weights : list[float] = weights
+        self.weights: list[float] = weights
+        self.gradients: list[float] = []
 
 class NNetwork :
     # Probably disimpan sebagai semacam list of lists, dimana satu NNetwork terdiri dari X lists dimana masing2 list
@@ -12,11 +14,12 @@ class NNetwork :
     valid_activations = ["linear","relu","sigmoid","tanh","softmax"]
     
     def __init__(self, default_activation : str = "sigmoid", verbose = False):
-        self.layers : list[list[NNode]] = []
-        self.bias : list[list[float]]
-        self.activation_array = []
-        self.default_activation = default_activation
-        self.verbose = verbose
+        self.layers: list[list[NNode]] = []
+        self.bias: list[list[float]] = []
+        self.gradients: list[list[float]] = []
+        self.activation_array: list[str] = []
+        self.default_activation: str = default_activation
+        self.verbose: bool = verbose
     
     def activate(self,tempresult : list[float], method : str):
         if method == "sigmoid" :
@@ -32,8 +35,11 @@ class NNetwork :
     def getLayerCount(self):
         return len(self.layers)
     
+    # LAYERS
     def addLayer(self, preferred_activation : str = None):
         self.layers.append([])
+        self.bias.append([])
+        self.gradients.append([])
         if (preferred_activation == None):
             self.activation_array.append(self.default_activation)
         else:
@@ -54,11 +60,13 @@ class NNetwork :
         except IndexError:
             print("Bruh illegal")
             
-    # Insert layer to node
+    # NODES
     def addNode(self, layer : int, idx : int = -1, weights : list[float] = []):
-        if (idx == -1) : #Set index to last if unsupplied
+        if (idx == -1) : # Set index to last if unsupplied
             idx = len(self.layers)
         self.layers[layer].insert(idx,NNode(weights=weights))
+        self.bias[layer].append(0.0)
+        self.gradients[layer].append([0.0] * len(weights))
         
     def popNode(self, layer : int, idx : int):
         l = self.getLayer(layer)
@@ -73,63 +81,39 @@ class NNetwork :
                 self.layers[layer-1][i].weights.pop(idx)
         
         self.layers[layer].pop(idx)
-            
-    # See asserts in calc, this tries to prevents those from happening
-    # misalnya ada layer baru atau geser2, ini harus di handle juga sih nanti
-    def refresh(self):
-        for layer in range(len(self.layers) - 1):
-            for node in range(self.layers):
-                while len(self.layers[layer][node]) < len(self.layers[layer+1]):
-                    self.layers[layer][node].append(0)
     
-    def calc(self, inputList : list[float]) -> list[float]:
-        if len(inputList) != len(self.getLayer(0)):
-            raise IndexError
+    # Inisiasi Bobot dan Bias
+    def initialize_weights(self, method: str = "zero", lower: float = -0.5, upper: float = 0.5, mean: float = 0.0, variance: float = 0.1, seed: int = None):
+        np.random.seed(seed)
+        # Inisiasi bobot
+        for layer_idx in range(len(self.layers) - 1): # Skip output layer
+            for node in self.layers[layer_idx]:
+                num_weights = len(self.layers[layer_idx + 1]) # Weight = Jumlah neuron di layer berikutnya
+                if method == "zero":
+                    node.weights = [0.0] * num_weights
+                elif method == "uniform":
+                    node.weights = list(np.random.uniform(lower, upper, num_weights))
+                elif method == "normal":
+                    node.weights = list(np.random.normal(mean, np.sqrt(variance), num_weights))
+                else:
+                    raise ValueError("Metode inisialisasi tidak dikenali")
         
-        finalResult : list[float] = inputList
-        
-
-        
-        for i in range(self.getLayerCount()-1): #itterate for every between-layers per-say
-            
-            # Constants
-            currentLayerNodeCount = len(self.layers[i])
-            nextLayerNodeCount = len(self.layers[i+1])
-            
-            result : list[float] = [0 for x in range(nextLayerNodeCount)] #result of every calc process
-            
-            assert (currentLayerNodeCount == len(finalResult)) #This gets "dragged" from left to right
-            #Makes sure that there exists a corresponding node for every input
-            
-            for nodeIdx in range(currentLayerNodeCount) : #Itterate through every node
-                node = self.layers[i][nodeIdx]
-                assert len(node.weights) == nextLayerNodeCount
-                
-                #Simply we push calculate the results of that node
-                for j in range(nextLayerNodeCount):
-                    result[j] += finalResult[nodeIdx] * node.weights[j]
-                
-            assert (len(result) == len(self.layers[i+1]))
-            
-            # Insert bias
-            assert (nextLayerNodeCount == len(self.bias[i]))
-            for j in range(nextLayerNodeCount):
-                result[j] += self.bias[i][j]
-            
-            # EXPORT TO IMAGE OR SOMETHING FOR TRUE VALUES HERE OR SMTHN
-            # activate
-            if (self.verbose) :
-                print(result,"==>",end=" ")
-            self.activate(result,self.activation_array[i])
-            
-            finalResult = result
-        return finalResult
-        
-            
+        # Inisiasi bias
+        for layer_idx in range(len(self.bias) - 1):
+            num_biases = len(self.layers[layer_idx + 1])
+            if method == "zero":
+                self.bias[layer_idx] = [0.0] * num_biases
+            elif method == "uniform":
+                self.bias[layer_idx] = list(np.random.uniform(lower, upper, num_biases))
+            elif method == "normal":
+                self.bias[layer_idx] = list(np.random.normal(mean, np.sqrt(variance), num_biases))
+            else:
+                raise ValueError("Metode inisialisasi tidak dikenali")
     
-    def calcTest(self, *args : float) -> list[float]:
-        return self.calc(args)
-    
-    def __sanitizeWeightList(self, intendedLayer : int, weights : list):
-        pass
-        #if (len(weights))
+    def print_weights(self):
+        for i, layer in enumerate(self.layers[:-1]):
+            print(f"Layer {i}:")
+            for j, node in enumerate(layer):
+                print(f"  Neuron {j}: Weights={node.weights}")
+            print(f"  Bias: {self.bias[i]}")
+        print()
