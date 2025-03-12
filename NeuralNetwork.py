@@ -9,17 +9,20 @@ class NNetwork :
     # Probably disimpan sebagai semacam list of lists, dimana satu NNetwork terdiri dari X lists dimana masing2 list
     # Ialah suatu layer tersendiri
     # Lalu satu node direpresentasikan dengan list of weights ke arah kanan?
-    def __init__(self, activation : str = "sigmoid", verbose = False):
+    valid_activations = ["linear","relu","sigmoid","tanh","softmax"]
+    
+    def __init__(self, default_activation : str = "sigmoid", verbose = False):
         self.layers : list[list[NNode]] = []
         self.bias : list[list[float]]
-        self.activation = activation
+        self.activation_array = []
+        self.default_activation = default_activation
         self.verbose = verbose
     
-    def activate(self,tempresult : list[float]):
-        if self.activation == "sigmoid" :
+    def activate(self,tempresult : list[float], method : str):
+        if method == "sigmoid" :
             for i in range(len(tempresult)):
                 tempresult[i] = (1 / (1 + exp(-tempresult[i])))
-        elif self.activation == "none":
+        elif method == "none":
             pass
         else :
             raise Exception("Undefined activation method")
@@ -29,12 +32,19 @@ class NNetwork :
     def getLayerCount(self):
         return len(self.layers)
     
-    def addLayer(self):
+    def addLayer(self, preferred_activation : str = None):
         self.layers.append([])
+        if (preferred_activation == None):
+            self.activation_array.append(self.default_activation)
+        else:
+            if (not (preferred_activation in NNetwork.valid_activations)):
+                raise KeyError
+            self.activation_array.append(preferred_activation)
         
     def removeLayer(self,layer : int):
         try :
-            self.layers.pop(layer)    
+            self.layers.pop(layer)
+            self.activation_array.pop(layer)
         except IndexError:
             print("Bruh illegal")
             
@@ -110,7 +120,7 @@ class NNetwork :
             # activate
             if (self.verbose) :
                 print(result,"==>",end=" ")
-            self.activate(result)
+            self.activate(result,self.activation_array[i])
             
             finalResult = result
         return finalResult

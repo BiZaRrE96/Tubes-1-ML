@@ -2,8 +2,8 @@ from NeuralNetwork import *
 
 ntest = NNetwork(verbose=True)
 
-ntest.addLayer()
-ntest.addLayer()
+ntest.addLayer(preferred_activation="sigmoid")
+ntest.addLayer(preferred_activation="sigmoid")
 ntest.addLayer()
 
 ntest.addNode(0, weights=[0.15,0.25])
