@@ -35,7 +35,7 @@ class NNetwork :
     def getLayerCount(self):
         return len(self.layers)
     
-    # LAYERS
+    # Layer
     def addLayer(self, preferred_activation : str = None):
         self.layers.append([])
         self.bias.append([])
@@ -60,7 +60,7 @@ class NNetwork :
         except IndexError:
             print("Bruh illegal")
             
-    # NODES
+    # Nodes
     def addNode(self, layer : int, idx : int = -1, weights : list[float] = []):
         if (idx == -1) : # Set index to last if unsupplied
             idx = len(self.layers)
@@ -110,6 +110,7 @@ class NNetwork :
             else:
                 raise ValueError("Metode inisialisasi tidak dikenali")
     
+    # Menampilkan bobot setiap layer
     def print_weights(self):
         for i, layer in enumerate(self.layers[:-1]):
             print(f"Layer {i}:")
@@ -117,3 +118,15 @@ class NNetwork :
                 print(f"  Neuron {j}: Weights={node.weights}")
             print(f"  Bias: {self.bias[i]}")
         print()
+    
+    # Menampilkan gradient tiap layer
+    def print_gradients(self, layers_to_print: list[int]):
+        for layer_idx in layers_to_print:
+            if layer_idx >= len(self.gradients) or layer_idx < 0:
+                print(f"Layer {layer_idx} tidak valid.")
+                continue
+            
+            print(f"Gradien Layer {layer_idx}:")
+            for j, node_gradients in enumerate(self.gradients[layer_idx]):
+                print(f"  Neuron {j}: Gradients={node_gradients}")
+            print()
