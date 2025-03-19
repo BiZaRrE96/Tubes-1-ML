@@ -202,11 +202,7 @@ class NNetwork:
         plt.show()
 
     def save_model(self, filename: str):
-        """
-        Menyimpan model ke file menggunakan pickle dengan error handling.
-
-        :param filename: Nama file tempat model disimpan
-        """
+        """Menyimpan model ke file menggunakan pickle dengan error handling."""
         try:
             with open(filename, 'wb') as f:
                 pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
@@ -216,12 +212,7 @@ class NNetwork:
         
     @staticmethod
     def load_model(filename: str):
-        """
-        Memuat model dari file menggunakan pickle dengan error handling.
-
-        :param filename: Nama file dari mana model akan dimuat
-        :return: Objek model yang dimuat atau None jika gagal
-        """
+        """Memuat model dari file menggunakan pickle dengan error handling."""
         if not os.path.exists(filename):
             print(f"❌ File '{filename}' tidak ditemukan.")
             return None
@@ -239,33 +230,23 @@ class NNetwork:
         return None
 
     def forward_propagation(self, inputs: np.ndarray):
-        """
-        Melakukan forward propagation pada jaringan saraf.
-
-        :param inputs: Input data dengan bentuk (batch_size, input_size)
-        :return: Output dari layer terakhir setelah aktivasi
-        """
+        """Melakukan forward propagation pada jaringan saraf."""
         if len(inputs.shape) != 2:
             raise ValueError("Input harus berbentuk (batch_size, input_size)")
 
-        current_input = inputs  # Input layer (batch_size, input_size)
+        current_input = inputs 
 
-        # Iterasi melalui setiap layer (mulai dari hidden hingga output)
-        for layer_idx in range(1, len(self.layers)):  # Skip input layer (index 0)
+        for layer_idx in range(1, len(self.layers)):
             layer_output = []
 
-            activation_function = self.activation_functions[layer_idx - 1]  # Aktivasi sesuai layer
+            activation_function = self.activation_functions[layer_idx - 1] 
 
-            # Iterasi setiap node di layer
             for node in self.layers[layer_idx]:
-                # Validasi jumlah bobot sesuai dengan jumlah input
                 if len(node.weights) != current_input.shape[1]:
                     raise ValueError(f"Dimensi input layer {layer_idx} tidak sesuai dengan bobot node.")
 
-                # Perhitungan z = Wx + b
                 z = np.dot(current_input, np.array(node.weights)) + node.bias
 
-                # Terapkan fungsi aktivasi sesuai layer
                 if activation_function == "sigmoid":
                     node_output = FA.sigmoid(z)
                 elif activation_function == "relu":
@@ -275,74 +256,24 @@ class NNetwork:
                 elif activation_function == "linear":
                     node_output = FA.linear(z)
                 elif activation_function == "softmax":
-                    layer_output.append(z)  # Simpan z untuk dihitung softmax nanti
+                    layer_output.append(z) 
                     continue
                 else:
                     raise ValueError(f"Fungsi aktivasi '{activation_function}' tidak dikenali.")
 
                 layer_output.append(node_output)
 
-            # Jika layer menggunakan softmax, hitung setelah semua z dikumpulkan
             if activation_function == "softmax":
-                layer_output = FA.softmax(np.array(layer_output).T)  # Softmax untuk seluruh layer
+                layer_output = FA.softmax(np.array(layer_output).T) 
 
-            # Ubah output layer menjadi NumPy array (batch_size, jumlah_neuron)
-            current_input = np.array(layer_output).T  # Transposisi agar tetap sesuai dimensi
+            current_input = np.array(layer_output).T 
 
-        return current_input  # Return hasil akhir
-
-
-
-
-
-    
-        # Langkah 1: Menghitung error untuk layer output
-        output_layer_idx = len(self.layers) - 1
-        activations = self.forward_propagation(inputs)
-        
-        error = activations[-1] - expected_outputs  # Menggunakan MSE untuk contoh ini
-        output_gradients = error
-
-        # Langkah 2: Backpropagate ke setiap layer
-        for layer_idx in reversed(range(len(self.layers) - 1)):  # Tidak perlu menghitung untuk output layer
-            layer = self.layers[layer_idx]
-            next_layer = self.layers[layer_idx + 1]
-
-            next_layer_gradients = self.gradients[layer_idx + 1]
-
-            for node_idx, node in enumerate(layer):
-                # Menghitung gradien berdasarkan fungsi aktivasi
-                if self.activation_array[layer_idx] == "linear":
-                    activation_gradient = 1
-                elif self.activation_array[layer_idx] == "relu":
-                    activation_gradient = 1 if node.weights[node_idx] > 0 else 0
-                elif self.activation_array[layer_idx] == "sigmoid":
-                    sigmoid_output = 1 / (1 + np.exp(-node.weights[node_idx]))  # Sigmoid output
-                    activation_gradient = sigmoid_output * (1 - sigmoid_output)
-                elif self.activation_array[layer_idx] == "tanh":
-                    tanh_output = np.tanh(node.weights[node_idx])
-                    activation_gradient = 1 - tanh_output**2
-                else:
-                    raise ValueError("Fungsi aktivasi tidak dikenali")
-
-                error_gradient = next_layer_gradients[node_idx] * activation_gradient
-                self.gradients[layer_idx][node_idx] = error_gradient  # Update gradien
-
-                if layer_idx > 0:
-                    for prev_node_idx, prev_node in enumerate(self.layers[layer_idx - 1]):
-                        prev_node.weights[node_idx] -= error_gradient * prev_node.weights[prev_node_idx]  # Update bobot
+        return current_input 
 
     def backward_propagation(self, inputs: np.ndarray, targets: np.ndarray, learning_rate: float = 0.01):
-        """
-        Melakukan backward propagation dan memperbarui bobot dengan Gradient Descent.
-
-        :param inputs: Input data (batch_size, input_size)
-        :param targets: Label target (batch_size, output_size)
-        :param learning_rate: Nilai learning rate untuk update bobot
-        """
+        """Melakukan backward propagation dan memperbarui bobot dengan Gradient Descent."""
         batch_size = inputs.shape[0]
 
-        # 1️⃣ Forward Pass
         activations = [inputs]
         current_input = inputs
 
@@ -358,44 +289,33 @@ class NNetwork:
             current_input = np.array(layer_output).T
             activations.append(current_input)
 
-        # 2️⃣ Backward Pass: Hitung Gradien
         errors = [None] * len(self.layers)
 
-        # **Hitung Error di Output Layer**
         output_activations = activations[-1]
         loss_derivative = output_activations - targets
 
         errors[-1] = loss_derivative * FA.activation_derivatives[self.activation_functions[-1]](output_activations)
 
-        # **Backpropagate Error ke Hidden Layer**
         for layer_idx in range(len(self.layers) - 2, 0, -1):
             error_signal = errors[layer_idx + 1]
             activation_derivative = FA.activation_derivatives[self.activation_functions[layer_idx - 1]](activations[layer_idx])
             errors[layer_idx] = np.dot(error_signal, np.array([node.weights for node in self.layers[layer_idx + 1]])) * activation_derivative
 
-        # 3️⃣ Simpan Gradien untuk Update Bobot
         for layer_idx in range(1, len(self.layers)):
             prev_activation = activations[layer_idx - 1]
             error_signal = errors[layer_idx]
 
             for node_idx, node in enumerate(self.layers[layer_idx]):
-                # Simpan gradien bobot
                 node.gradients = np.dot(prev_activation.T, error_signal[:, node_idx]) / batch_size
-                # Simpan gradien bias
                 node.bias_gradient = np.mean(error_signal[:, node_idx], axis=0)
 
-        # 4️⃣ Update Bobot Menggunakan Gradient Descent
         self.update_weights(learning_rate)
 
-        return np.mean(loss_derivative**2)  # Return Mean Squared Error sebagai indikasi loss
+        return np.mean(loss_derivative**2) 
 
     def update_weights(self, learning_rate: float = 0.01):
-        """
-        Memperbarui bobot dan bias menggunakan Gradient Descent.
-
-        :param learning_rate: Learning rate (α) untuk mengontrol besar perubahan bobot.
-        """
-        for layer_idx in range(1, len(self.layers)):  # Lewati input layer
+        """Memperbarui bobot dan bias menggunakan Gradient Descent."""
+        for layer_idx in range(1, len(self.layers)): 
             for node in self.layers[layer_idx]:
                 # Update bobot
                 node.weights -= learning_rate * np.array(node.gradients)
