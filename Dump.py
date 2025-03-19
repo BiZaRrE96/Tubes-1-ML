@@ -53,3 +53,63 @@ def calcTest(self, *args : float) -> list[float]:
 def __sanitizeWeightList(self, intendedLayer : int, weights : list):
     pass
     #if (len(weights))
+
+def removeLayer(self,layer : int):
+    try :
+        self.layers.pop(layer)
+        self.activation_array.pop(layer)
+    except IndexError:
+        print("Bruh illegal")
+        
+def getLayer(self,layer : int):
+    try :
+        return self.layers[layer]    
+    except IndexError:
+        print("Bruh illegal")
+    
+def popNode(self, layer : int, idx : int):
+    l = self.getLayer(layer)
+    if idx >= len(l):
+        raise IndexError
+    
+    # Iterate for every layer before it if exists
+    if (layer > 0 and layer < self.getLayerCount()):
+        # cleanse layer-1
+        for i in range(len(self.getLayer(layer-1))):
+            #For every node in layer-1
+            self.layers[layer-1][i].weights.pop(idx)
+    
+    self.layers[layer].pop(idx)
+
+def activate(self,tempresult : list[float], method : str):
+    if method == "sigmoid" :
+        for i in range(len(tempresult)):
+            tempresult[i] = (1 / (1 + exp(-tempresult[i])))
+    elif method == "none":
+        pass
+    else :
+        raise Exception("Undefined activation method")
+    if (self.verbose) :
+            print(tempresult)
+    
+def getLayerCount(self):
+    return len(self.layers)
+
+def print_weights(self):
+    for i, layer in enumerate(self.layers[:-1]):
+        print(f"Layer {i}:")
+        for j, node in enumerate(layer):
+            print(f"  Neuron {j}: Weights={node.weights}")
+        print(f"  Bias: {self.bias[i]}")
+    print()
+
+def print_gradients(self, layers_to_print: list[int]):
+    for layer_idx in layers_to_print:
+        if layer_idx >= len(self.gradients) or layer_idx < 0:
+            print(f"Layer {layer_idx} tidak valid.")
+            continue
+        
+        print(f"Gradien Layer {layer_idx}:")
+        for j, node_gradients in enumerate(self.gradients[layer_idx]):
+            print(f"  Neuron {j}: Gradients={node_gradients}")
+        print()
