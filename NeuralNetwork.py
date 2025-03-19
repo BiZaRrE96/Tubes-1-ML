@@ -4,6 +4,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import pickle
 import os
+from contextlib import suppress
 
 # Functions Import
 import FungsiAktivasi as FA
@@ -15,31 +16,50 @@ class NNode:
     def __init__(self, weights: list[float] = None, bias: float = 0.0):
         self.id = NNode._id_counter
         NNode._id_counter += 1
-        self.weights = weights if weights is not None else []
+        self.weights = np.array(weights) if weights is not None else np.array([]) 
         self.bias = bias
-        self.gradients = []
+        self.gradients = np.zeros_like(self.weights) 
+        self.bias_gradient = 0.0 
+    
+    def reset_gradients(self):
+        """Reset gradien bobot dan bias setelah update parameter."""
+        self.gradients = np.zeros_like(self.weights)
+        self.bias_gradient = 0.0
 
     def __repr__(self):
         return f"NNode(id={self.id}, weights={self.weights}, bias={self.bias})"
 
 class NNetwork:
-    valid_activations = {
-        "linear": FA.linear,
-        "relu": FA.relu,
-        "sigmoid": FA.sigmoid,
-        "tanh": FA.tanh,
-        "softmax": FA.softmax
-    }
-    
     def __init__(self, num_of_layers: int, layer_sizes: list[int], activation_functions: list[str] = None, verbose=False):
-        self.layers: list[list[NNode]] = [
-            [NNode(weights=[np.random.randn() for _ in range(layer_sizes[i-1])] if i > 0 else [], 
-                bias=np.random.randn()) 
-            for _ in range(layer_sizes[i])] 
-            for i in range(num_of_layers)
-        ]
-        self.activation_functions: list[str] = ["sigmoid"] * num_of_layers
+        self.layer_sizes = layer_sizes 
         self.verbose = verbose
+
+        if activation_functions is None:
+            activation_functions = ["sigmoid"] * (num_of_layers - 2) + ["softmax"]  # Default: Sigmoid untuk hidden, Softmax untuk output
+        elif len(activation_functions) != num_of_layers - 1:
+            raise ValueError(f"Jumlah fungsi aktivasi harus {num_of_layers - 1}, bukan {len(activation_functions)}.")
+        self.activation_functions = activation_functions
+
+        # Inisialisasi layer
+        self.layers: list[list[NNode]] = []
+        for i in range(num_of_layers):
+            layer = [
+                NNode(
+                    weights=np.random.randn(layer_sizes[i-1]) if i > 0 else [],  
+                    bias=np.random.randn()
+                )
+                for _ in range(layer_sizes[i])
+            ]
+            self.layers.append(layer)
+
+        # Print Struktur Jika Verbose
+        if self.verbose:
+            print(f"✅ Jaringan saraf dengan {num_of_layers} layer berhasil dibuat!")
+            for i, layer in enumerate(self.layers):
+                if i == 0:
+                    print(f"🔹 Layer {i} (Input) - {len(layer)} neurons")
+                else:
+                    print(f"🔹 Layer {i} - {len(layer)} neurons, Aktivasi: {self.activation_functions[i-1]}")
     
     # def addLayer(self, neurons: int, activation: str = None):
     #     """
@@ -78,86 +98,108 @@ class NNetwork:
     #     self.gradients[layer].append([0.0] * len(weights))
     
     def initialize_weights(self, method: str = "zero", lower: float = -0.5, upper: float = 0.5, mean: float = 0.0, variance: float = 0.1, seed: int = None, verbose: bool = False):
-        if seed is not None:
-            np.random.seed(seed) 
+        rng = np.random.default_rng(seed)  
 
         for layer_idx in range(1, len(self.layers)):
             prev_layer_size = len(self.layers[layer_idx - 1])
 
             for node_idx, node in enumerate(self.layers[layer_idx]):
-                num_weights = prev_layer_size
-            
-                if method == "zero":
-                    node.weights = [0.0] * num_weights
-                    node.bias = 0.0
-                elif method == "uniform":
-                    node.weights = np.random.uniform(lower, upper, num_weights).tolist()
-                    node.bias = np.random.uniform(lower, upper)
-                elif method == "normal":
-                    node.weights = np.random.normal(mean, np.sqrt(variance), num_weights).tolist()
-                    node.bias = np.random.normal(mean, np.sqrt(variance))
-                else:
-                    raise ValueError(f"Metode inisialisasi '{method}' tidak dikenali. Gunakan 'zero', 'uniform', atau 'normal'.")
+                num_weights = prev_layer_size 
+
+                # Mapping metode inisialisasi
+                weight_init_methods = {
+                    "zero": lambda: np.zeros(num_weights),
+                    "uniform": lambda: rng.uniform(lower, upper, num_weights),
+                    "normal": lambda: rng.normal(mean, np.sqrt(variance), num_weights),
+                    "xavier": lambda: rng.normal(0, np.sqrt(1 / prev_layer_size), num_weights),  # Xavier untuk sigmoid/tanh
+                    "he": lambda: rng.normal(0, np.sqrt(2 / prev_layer_size), num_weights)  # He untuk ReLU
+                }
+
+                if method not in weight_init_methods:
+                    raise ValueError(f"Metode inisialisasi '{method}' tidak dikenali. Gunakan 'zero', 'uniform', 'normal', 'xavier', atau 'he'.")
+
+                # Set bobot dan bias
+                node.weights = weight_init_methods[method]()
+                node.bias = rng.normal(0, np.sqrt(variance)) if method in ["normal", "xavier", "he"] else rng.uniform(lower, upper)
 
                 if verbose:
-                    print(f"Layer {layer_idx} - Node {node_idx}: weights={node.weights}, bias={node.bias}")
+                    print(f"Layer {layer_idx} - Node {node_idx}: weights={node.weights.tolist()}, bias={node.bias:.4f}")
 
     def plot_network_graph(self):
-        """ Menampilkan struktur jaringan dalam bentuk graf """
+        """Menampilkan struktur jaringan dalam bentuk graf visual"""
         G = nx.DiGraph()
-        pos = {} 
-        
-        y_offset = 0 
+        pos = {}  
         node_labels = {}
 
-        for layer_idx, layer in enumerate(self.layers):
-            x_offset = 0
-            for node in layer:
-                node_id = f"L{layer_idx}N{node.id}"
-                G.add_node(node_id, layer=layer_idx)
-                pos[node_id] = (layer_idx, -x_offset)
-                node_labels[node_id] = f"N{node.id}\nB:{node.bias:.2f}"
+        layer_spacing = 2.0  
+        node_spacing = 1.5   
+        node_colors = [] 
 
+        color_map = ["lightgreen", "lightblue", "salmon"] 
+
+        for layer_idx, layer in enumerate(self.layers):
+            for node_idx, node in enumerate(layer):
+                node_id = f"L{layer_idx}N{node_idx}" 
+
+                G.add_node(node_id, layer=layer_idx)
+                pos[node_id] = (layer_idx * layer_spacing, -node_idx * node_spacing)
+                node_labels[node_id] = f"N{node_idx}\nB:{node.bias:.2f}"
+
+                if layer_idx == 0:
+                    node_colors.append(color_map[0]) 
+                elif layer_idx == len(self.layers) - 1:
+                    node_colors.append(color_map[2]) 
+                else:
+                    node_colors.append(color_map[1])  
+
+                # Hubungkan ke layer sebelumnya
                 if layer_idx > 0:
                     prev_layer = self.layers[layer_idx - 1]
-                    for prev_node in prev_layer:
-                        prev_id = f"L{layer_idx-1}N{prev_node.id}"
-                        weight_idx = prev_layer.index(prev_node)
-                        weight = node.weights[weight_idx]
+                    for prev_idx, prev_node in enumerate(prev_layer):
+                        prev_id = f"L{layer_idx-1}N{prev_idx}"
+                        weight = node.weights[prev_idx]  
+
                         G.add_edge(prev_id, node_id, weight=f"{weight:.2f}")
 
-                x_offset += 1.5
+        plt.figure(figsize=(12, 6))
+        nx.draw(
+            G, pos, with_labels=True, labels=node_labels, node_color=node_colors,
+            edge_color="gray", node_size=2000, font_size=10
+        )
 
-            y_offset += 1.5
-
-        plt.figure(figsize=(10, 6))
-        nx.draw(G, pos, with_labels=True, labels=node_labels, node_color="lightblue", edge_color="gray", node_size=2000, font_size=10)
-        
+        # Tambahkan label bobot pada edge
         edge_labels = {(u, v): d["weight"] for u, v, d in G.edges(data=True)}
         nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
-        
-        plt.title("Struktur Jaringan Saraf")
+
+        plt.title("Struktur Jaringan Saraf Tiruan", fontsize=14)
         plt.show()
 
-    def plot_weight_distribution(self, layers: list[int]):
-        """Menampilkan distribusi bobot dari layer tertentu"""
+    def plot_weight_distribution(self, layers: list[int], show_grid: bool = True):
+        """Menampilkan distribusi bobot dari layer tertentu dengan statistik tambahan."""
         plt.figure(figsize=(10, 5))
 
-        found_data = False 
+        found_data = False  
+        colors = plt.cm.viridis(np.linspace(0, 1, len(layers)))  # Warna otomatis
 
-        for layer_idx in layers:
+        for idx, layer_idx in enumerate(layers):
             if layer_idx < 1 or layer_idx >= len(self.layers):
                 print(f"Layer {layer_idx} tidak valid.")
                 continue
 
-            weights = [weight for node in self.layers[layer_idx] for weight in node.weights]
+            # Ambil semua bobot dari layer yang dipilih
+            weights = np.array([weight for node in self.layers[layer_idx] for weight in node.weights])
 
-            if not weights: 
+            if weights.size == 0: 
                 print(f"Layer {layer_idx} tidak memiliki bobot.")
                 continue
 
             found_data = True
-            plt.hist(weights, bins=20, alpha=0.6, label=f"Layer {layer_idx}")
+
+            # Hitung statistik
+            mean = np.mean(weights)
+            std = np.std(weights)
+
+            plt.hist(weights, bins=20, alpha=0.6, label=f"Layer {layer_idx} (μ={mean:.3f}, σ={std:.3f})", color=colors[idx])
 
         if not found_data:
             print("Tidak ada data bobot yang dapat ditampilkan.")
@@ -166,29 +208,35 @@ class NNetwork:
         plt.xlabel("Nilai Bobot")
         plt.ylabel("Frekuensi")
         plt.legend()
-        plt.title("Distribusi Bobot")
-        plt.grid(True, linestyle="--", alpha=0.5)
+        plt.title("Distribusi Bobot per Layer")
+        if show_grid:
+            plt.grid(True, linestyle="--", alpha=0.5)
         plt.show()
 
-    def plot_gradient_distribution(self, layers: list[int]):
-        """Menampilkan distribusi gradien bobot dari layer tertentu"""
+    def plot_gradient_distribution(self, layers: list[int], show_grid: bool = True):
+        """Menampilkan distribusi gradien dari layer tertentu dengan statistik tambahan."""
         plt.figure(figsize=(10, 5))
 
-        found_data = False 
+        found_data = False  
+        colors = plt.cm.plasma(np.linspace(0, 1, len(layers))) 
 
-        for layer_idx in layers:
+        for idx, layer_idx in enumerate(layers):
             if layer_idx < 1 or layer_idx >= len(self.layers):
                 print(f"Layer {layer_idx} tidak valid.")
                 continue
 
-            gradients = [grad for node in self.layers[layer_idx] for grad in node.gradients]
+            gradients = np.array([grad for node in self.layers[layer_idx] for grad in node.gradients])
 
-            if not gradients:
+            if gradients.size == 0: 
                 print(f"Layer {layer_idx} tidak memiliki gradien.")
                 continue
 
             found_data = True
-            plt.hist(gradients, bins=20, alpha=0.6, label=f"Layer {layer_idx}")
+
+            mean = np.mean(gradients)
+            std = np.std(gradients)
+
+            plt.hist(gradients, bins=20, alpha=0.6, label=f"Layer {layer_idx} (μ={mean:.3f}, σ={std:.3f})", color=colors[idx])
 
         if not found_data:
             print("Tidak ada data gradien yang dapat ditampilkan.")
@@ -197,109 +245,141 @@ class NNetwork:
         plt.xlabel("Nilai Gradien")
         plt.ylabel("Frekuensi")
         plt.legend()
-        plt.title("Distribusi Gradien Bobot")
-        plt.grid(True, linestyle="--", alpha=0.5)
+        plt.title("Distribusi Gradien Bobot per Layer")
+        if show_grid:
+            plt.grid(True, linestyle="--", alpha=0.5)
         plt.show()
 
-    def save_model(self, filename: str):
+    def save_model(self, filename: str, verbose: bool = True):
         """Menyimpan model ke file menggunakan pickle dengan error handling."""
+        if not filename.endswith(".pkl"):
+            filename += ".pkl" 
+
         try:
             with open(filename, 'wb') as f:
                 pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
-            print(f"✅ Model berhasil disimpan ke '{filename}'")
+            if verbose:
+                print(f"✅ Model berhasil disimpan ke '{filename}'")
         except Exception as e:
-            print(f"❌ Gagal menyimpan model: {e}")
+            if verbose:
+                print(f"❌ Gagal menyimpan model: {e}")
         
     @staticmethod
-    def load_model(filename: str):
+    def load_model(filename: str, verbose: bool = True):
         """Memuat model dari file menggunakan pickle dengan error handling."""
+        if not filename.endswith(".pkl"):
+            filename += ".pkl" 
+
         if not os.path.exists(filename):
-            print(f"❌ File '{filename}' tidak ditemukan.")
+            if verbose:
+                print(f"❌ File '{filename}' tidak ditemukan.")
             return None
 
-        try:
+        with suppress(pickle.UnpicklingError, EOFError, Exception):
             with open(filename, 'rb') as f:
                 model = pickle.load(f)
-            print(f"✅ Model berhasil dimuat dari '{filename}'")
-            return model
-        except (pickle.UnpicklingError, EOFError):
-            print(f"❌ Gagal memuat model: File '{filename}' mungkin korup atau tidak kompatibel.")
-        except Exception as e:
-            print(f"❌ Terjadi kesalahan saat memuat model: {e}")
 
+            if isinstance(model, NNetwork):  
+                if verbose:
+                    print(f"✅ Model berhasil dimuat dari '{filename}'")
+                return model
+            else:
+                if verbose:
+                    print(f"❌ File '{filename}' bukan model `NNetwork` yang valid.")
+
+        if verbose:
+            print(f"❌ Gagal memuat model: File '{filename}' mungkin korup atau tidak kompatibel.")
         return None
 
     def forward_propagation(self, inputs: np.ndarray):
         """Melakukan forward propagation pada jaringan saraf."""
+        if len(inputs.shape) == 1:
+            inputs = inputs.reshape(1, -1)
+
         if len(inputs.shape) != 2:
             raise ValueError("Input harus berbentuk (batch_size, input_size)")
 
-        current_input = inputs 
+        current_input = inputs
 
         for layer_idx in range(1, len(self.layers)):
-            layer_output = []
+            activation_function = self.activation_functions[layer_idx - 1]
 
-            activation_function = self.activation_functions[layer_idx - 1] 
+            weights = np.array([node.weights for node in self.layers[layer_idx]])
+            biases = np.array([node.bias for node in self.layers[layer_idx]])
 
-            for node in self.layers[layer_idx]:
-                if len(node.weights) != current_input.shape[1]:
-                    raise ValueError(f"Dimensi input layer {layer_idx} tidak sesuai dengan bobot node.")
+            z = np.dot(current_input, weights.T) + biases
 
-                z = np.dot(current_input, np.array(node.weights)) + node.bias
+            if activation_function == "sigmoid":
+                current_input = FA.sigmoid(z)
+            elif activation_function == "relu":
+                current_input = FA.relu(z)
+            elif activation_function == "tanh":
+                current_input = FA.tanh(z)
+            elif activation_function == "linear":
+                current_input = FA.linear(z)
+            elif activation_function == "softmax":
+                current_input = FA.softmax(z) 
+            else:
+                raise ValueError(f"Fungsi aktivasi '{activation_function}' tidak dikenali.")
 
-                if activation_function == "sigmoid":
-                    node_output = FA.sigmoid(z)
-                elif activation_function == "relu":
-                    node_output = FA.relu(z)
-                elif activation_function == "tanh":
-                    node_output = FA.tanh(z)
-                elif activation_function == "linear":
-                    node_output = FA.linear(z)
-                elif activation_function == "softmax":
-                    layer_output.append(z) 
-                    continue
-                else:
-                    raise ValueError(f"Fungsi aktivasi '{activation_function}' tidak dikenali.")
-
-                layer_output.append(node_output)
-
-            if activation_function == "softmax":
-                layer_output = FA.softmax(np.array(layer_output).T) 
-
-            current_input = np.array(layer_output).T 
-
-        return current_input 
+        return current_input  
 
     def backward_propagation(self, inputs: np.ndarray, targets: np.ndarray, learning_rate: float = 0.01):
-        """Melakukan backward propagation dan memperbarui bobot dengan Gradient Descent."""
+        """
+        Melakukan backward propagation dan memperbarui bobot menggunaka Gradient Descent."""
         batch_size = inputs.shape[0]
 
+        if len(inputs.shape) == 1:
+            inputs = inputs.reshape(1, -1)
+
+        if len(inputs.shape) != 2:
+            raise ValueError("Input harus berbentuk (batch_size, input_size)")
+
+        # Forward Pass
         activations = [inputs]
         current_input = inputs
 
         for layer_idx in range(1, len(self.layers)):
-            layer_output = []
             activation_function = self.activation_functions[layer_idx - 1]
+            
+            weights = np.array([node.weights for node in self.layers[layer_idx]])
+            biases = np.array([node.bias for node in self.layers[layer_idx]])
 
-            for node in self.layers[layer_idx]:
-                z = np.dot(current_input, np.array(node.weights)) + node.bias
-                a = FA.activation_functions[activation_function](z)
-                layer_output.append(a)
+            z = np.dot(current_input, weights.T) + biases
 
-            current_input = np.array(layer_output).T
+            if activation_function == "sigmoid":
+                current_input = FA.sigmoid(z)
+            elif activation_function == "relu":
+                current_input = FA.relu(z)
+            elif activation_function == "tanh":
+                current_input = FA.tanh(z)
+            elif activation_function == "linear":
+                current_input = FA.linear(z)
+            elif activation_function == "softmax":
+                current_input = FA.softmax(z)  
+            else:
+                raise ValueError(f"Fungsi aktivasi '{activation_function}' tidak dikenali.")
+
             activations.append(current_input)
 
+        # Backward Pass: Hitung Gradien
         errors = [None] * len(self.layers)
 
         output_activations = activations[-1]
-        loss_derivative = output_activations - targets
+        loss_derivative = output_activations - targets  
 
-        errors[-1] = loss_derivative * FA.activation_derivatives[self.activation_functions[-1]](output_activations)
+        if self.activation_functions[-1] == "softmax":
+            errors[-1] = loss_derivative  
+        else:
+            errors[-1] = loss_derivative * FA.activation_derivatives[self.activation_functions[-1]](output_activations)
 
-        for layer_idx in range(len(self.layers) - 2, 0, -1):
+        for layer_idx in range(len(self.layers) - 2, 0, -1): 
             error_signal = errors[layer_idx + 1]
             activation_derivative = FA.activation_derivatives[self.activation_functions[layer_idx - 1]](activations[layer_idx])
-            errors[layer_idx] = np.dot(error_signal, np.array([node.weights for node in self.layers[layer_idx + 1]])) * activation_derivative
+            
+            weights_next_layer = np.array([node.weights for node in self.layers[layer_idx + 1]])
+            errors[layer_idx] = np.dot(error_signal, weights_next_layer) * activation_derivative
+
 
         for layer_idx in range(1, len(self.layers)):
             prev_activation = activations[layer_idx - 1]
@@ -307,17 +387,19 @@ class NNetwork:
 
             for node_idx, node in enumerate(self.layers[layer_idx]):
                 node.gradients = np.dot(prev_activation.T, error_signal[:, node_idx]) / batch_size
+
                 node.bias_gradient = np.mean(error_signal[:, node_idx], axis=0)
 
         self.update_weights(learning_rate)
 
-        return np.mean(loss_derivative**2) 
+        return np.mean(loss_derivative**2)  
 
     def update_weights(self, learning_rate: float = 0.01):
-        """Memperbarui bobot dan bias menggunakan Gradient Descent."""
+        """Memperbarui bobot dan bias menggunakan Gradient Descent, lalu mereset gradien."""
         for layer_idx in range(1, len(self.layers)): 
             for node in self.layers[layer_idx]:
-                # Update bobot
-                node.weights -= learning_rate * np.array(node.gradients)
-                # Update bias
-                node.bias -= learning_rate * node.bias_gradient
+                if node.gradients is not None and node.bias_gradient is not None:
+                    node.weights -= learning_rate * node.gradients
+                    node.bias -= learning_rate * node.bias_gradient
+
+                node.reset_gradients()
