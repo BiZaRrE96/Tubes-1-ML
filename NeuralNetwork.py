@@ -30,7 +30,7 @@ class NNode:
         return f"NNode(id={self.id}, weights={self.weights}, bias={self.bias})"
 
 class NNetwork:
-    def __init__(self, num_of_layers: int, layer_sizes: list[int], activation_functions: list[str] = None, verbose=False):
+    def __init__(self, num_of_layers: int, layer_sizes: list[int], activation_functions: list[str] = None, verbose=False, weights: list[list[list[float]]] = None, biases: list[list[float]] = None):
         self.layer_sizes = layer_sizes 
         self.verbose = verbose
 

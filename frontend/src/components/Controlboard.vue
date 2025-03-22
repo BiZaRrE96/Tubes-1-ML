@@ -18,19 +18,28 @@
     </label>
 
     <hr />
-    <div
-      v-for="(layer, index) in visibleLayers"
-      :key="index"
-    >
+
+    <div v-for="(layer, index) in visibleLayers" :key="index">
       <details>
         <summary>
           <strong>
             {{ index === 0 ? 'Input Layer' : `Hidden Layer ${index}` }}
           </strong>
-          <button @click.stop="graph.addNode(index)">+</button>
-          <button @click.stop="graph.popNode(index)">-</button>
+          <button @click="graph.addNode(index)">+</button>
+          <button @click="graph.popNode(index)">-</button>
           <span>{{ graph.getLayerNodeCount(index) }} nodes</span>
         </summary>
+
+        <label>
+          Activation Function:
+          <select v-model="activationModels[index]" @change="updateActivation(index)">
+            <option value="linear">Linear</option>
+            <option value="relu">ReLU</option>
+            <option value="sigmoid">Sigmoid</option>
+            <option value="tanh">Tanh</option>
+            <option value="softmax">Softmax</option>
+          </select>
+        </label>
 
         <div
           v-for="(node, nodeIndex) in graph.getLayerInfo(index).nodes"
@@ -53,15 +62,20 @@
       </details>
     </div>
 
+    <!-- Buttons to trigger actions -->
+    <button @click="sendToBackend">Send to Backend</button>
+    <button @click="getFromBackend">Get from Backend</button>
+    <button @click="importFromFile">Import from File</button>
+    <button @click="exportToFile">Export to File</button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useGraphStore } from '@/stores/graphStore';
+import { sendConfigToBackend, getGraphFromBackend, exportGraph, importGraph } from '@/utils/graphInterface'; // Assuming utils
 
 const graph = useGraphStore();
-
 const position = ref({ x: 50, y: 50 });
 let dragging = false;
 let offset = { x: 0, y: 0 };
@@ -90,10 +104,49 @@ const stopDrag = () => {
 };
 
 const visibleLayers = computed(() =>
-  graph.currentGraphState.layers.slice(0, graph.currentGraphState.layers.length - 1)
+  graph.currentGraphState.layers //.slice(0, graph.currentGraphState.layers.length - 1)
 );
 
+// A reactive object to store selected activation functions for each layer
+const activationModels = ref<{ [key: number]: string }>({});
 
+// Function to get the activation for the layer (with a fallback of 'linear')
+const getActivation = (index: number): string => {
+  return graph.currentGraphState.layers[index].activation ?? 'linear'; // Default to 'linear'
+};
+
+// Function to update the activation of a layer
+const updateActivation = (index: number) => {
+  const selectedActivation = activationModels.value[index];
+  graph.updateLayerActivation(index, selectedActivation);
+};
+
+// Actions for buttons
+
+const sendToBackend = async () => {
+  console.log(graph.currentGraphState);
+  const config = sendConfigToBackend(graph.currentGraphState);
+  console.log('Sent graph to backend:', config);
+};
+
+const getFromBackend = async () => {
+  const data = await getGraphFromBackend();
+  console.log('Received graph from backend:', data);
+};
+
+const importFromFile = async () => {
+  const data = await importGraph();
+  console.log('Imported graph:', data);
+};
+
+const exportToFile = async () => {
+  await exportGraph();
+  console.log('Exported graph');
+};
+
+graph.currentGraphState.layers.forEach((layer, index) => {
+  activationModels.value[index] = layer.activation ?? 'linear'; // Default to 'linear'
+});
 </script>
 
 <style scoped>
@@ -124,17 +177,9 @@ output {
   margin-left: 0.5rem;
 }
 
-.node-weight-editor {
-  margin-left: 1rem;
-  padding: 0.25rem 0.5rem;
-  background-color: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
+button {
+  margin-top: 10px;
+  padding: 5px;
+  cursor: pointer;
 }
-.node-weight-editor input[type='number'] {
-  width: 60px;
-  margin-left: 0.5rem;
-}
-
 </style>

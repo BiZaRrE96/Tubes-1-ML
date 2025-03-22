@@ -8,7 +8,7 @@
                     :layer="layer - 1"
                     :index="nodeIndex - 1"
                     />
-                <label> Layer {{ layer }}</label>
+                <label>{{ layer - 1 === 0 ? "Input" : layer == layerCount ? "Output" : `Layer ${layer - 1}` }}</label>
             </li>
         </ul>
     </div>

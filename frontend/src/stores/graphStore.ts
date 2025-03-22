@@ -1,6 +1,7 @@
 // stores/graphStore.ts
 import { defineStore } from 'pinia';
 import { ref, type Ref , computed} from 'vue';
+import type { GraphState, Layer, Node } from '../types/graphType';  // Import the shared types
 
 export const useGraphStore = defineStore('graph', () => {
   
@@ -10,12 +11,12 @@ export const useGraphStore = defineStore('graph', () => {
   const setHiddenLayerCount = (count: number) => {
     hiddenLayerCount.value = count;
   
-    const totalLayerCount = count + 2; // input + hidden + output
+    const totalLayerCount = count + 1; // input + hidden + output
     const existing = currentGraphState.value.layers.length;
   
     // Add missing layers
     for (let i = existing; i < totalLayerCount; i++) {
-      currentGraphState.value.layers.push({ nodes: [], bias: 0 });
+      currentGraphState.value.layers.push({ nodes: [], activation: "linear", bias: 0 });
     }
   
     // Remove extra layers
@@ -30,11 +31,7 @@ export const useGraphStore = defineStore('graph', () => {
   const updateAllWeights = () => {
     const layers = currentGraphState.value.layers;
     for (let i = 0; i < layers.length - 1; i++) {
-      const current = layers[i];
-      const next = layers[i + 1];
-      current.nodes.forEach((node) => {
-        node.weights = Array(next.nodes.length).fill(1.0); // default to 1.0
-      });
+      adjustWeightsForLayer(i);
     }
   };
   
@@ -42,21 +39,46 @@ export const useGraphStore = defineStore('graph', () => {
 
   const addNode = (layer: number) => {
     const nextLayer = currentGraphState.value.layers[layer + 1];
+  
+    // Create a new node with weights corresponding to the number of nodes in the next layer
     const newNode: Node = {
-      weights: nextLayer ? Array(nextLayer.nodes.length).fill(1.0) : [],
+      weights: nextLayer ? Array(nextLayer.nodes.length).fill(1.0) : [], // Initialize weights for new node
       x: 0,
       y: 0
     };
   
     currentGraphState.value.layers[layer].nodes.push(newNode);
-    updateAllWeights(); // Refresh weights
+  
+    // Now adjust weights for the other nodes in the layer based on the number of nodes in the next layer
+    adjustWeightsForLayer(layer-1);
   };
   
   const popNode = (layer: number) => {
     if (currentGraphState.value.layers[layer]?.nodes.length > 0) {
       currentGraphState.value.layers[layer].nodes.pop();
-      updateAllWeights();
+      // Adjust weights for the remaining nodes
+      adjustWeightsForLayer(layer-1);
     }
+  };
+  
+  // Function to adjust weights based on the number of nodes in the next layer
+  const adjustWeightsForLayer = (layer: number) => {
+    if (layer < 0) {
+      return;
+    }
+    const nextLayer = currentGraphState.value.layers[layer + 1];
+  
+    // Iterate through each node and add weights if necessary
+    currentGraphState.value.layers[layer].nodes.forEach((node) => {
+      const currentWeightCount = node.weights?.length || 0;
+      const nextLayerNodeCount = nextLayer?.nodes.length || 0;
+  
+      // If the weight count is less than the next layer node count, append more weights
+      if (currentWeightCount < nextLayerNodeCount) {
+        const additionalWeights = Array(nextLayerNodeCount - currentWeightCount).fill(1.0); // Default to 1.0
+        node.weights = [...(node.weights || []), ...additionalWeights];
+      }
+    });
   };
   
 
@@ -78,6 +100,12 @@ export const useGraphStore = defineStore('graph', () => {
       x: Number(node?.x ?? 0),
       y: Number(node?.y ?? 0)
     };
+  };
+
+  const updateLayerActivation = (layerIndex: number, activation: string) => {
+    if (currentGraphState.value.layers[layerIndex]) {
+      currentGraphState.value.layers[layerIndex].activation = activation;
+    }
   };
 
   const getLayerInfo = (layer: number): Layer => {
@@ -103,12 +131,14 @@ export const useGraphStore = defineStore('graph', () => {
   let history: GraphState[];
 
   setHiddenLayerCount(hiddenLayerCount.value);
+  console.log("Setup clear",currentGraphState.value)
 
   return {
     currentGraphState,
     hiddenLayerCount,
     setHiddenLayerCount,
     updatePos,
+    updateLayerActivation,
     getNodePos,
     getLayerInfo,
     getLayerNodeCount,
@@ -117,19 +147,3 @@ export const useGraphStore = defineStore('graph', () => {
     totalNodeCount,
   };  
 });
-
-// Type definitions
-interface GraphState {
-  layers: Layer[];
-}
-
-interface Layer {
-  nodes: Node[];
-  bias: number;
-}
-
-interface Node {
-  weights?: number[];
-  x?: number;
-  y?: number;
-}
