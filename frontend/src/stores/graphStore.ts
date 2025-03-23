@@ -5,8 +5,10 @@ import type { GraphState, Layer, Node } from '../types/graphType';  // Import th
 
 export const useGraphStore = defineStore('graph', () => {
   
-    const currentGraphState: Ref<GraphState> = ref({ layers: [] });
-    const hiddenLayerCount = ref(1);
+  const currentGraphState: Ref<GraphState> = ref({ 
+    layers: [{nodes : [{}]},{nodes : [{}]}],
+    biases: [{value: 1, weights:[1.0]}]});
+  const hiddenLayerCount = ref(1);
 
   const setHiddenLayerCount = (count: number) => {
     hiddenLayerCount.value = count;
@@ -16,14 +18,10 @@ export const useGraphStore = defineStore('graph', () => {
   
     // Add missing layers
     for (let i = existing; i < totalLayerCount; i++) {
-      currentGraphState.value.layers.push({ nodes: [], activation: "linear", bias: 0 });
+      currentGraphState.value.layers.push({ nodes: [], activation: "linear"});
+      currentGraphState.value.biases.push({ value: 1, weights: [] });
     }
-  
-    // Remove extra layers
-    while (currentGraphState.value.layers.length > totalLayerCount) {
-      currentGraphState.value.layers.pop();
-    }
-  
+
     // Auto-adjust weights for all nodes
     updateAllWeights();
   };
@@ -79,6 +77,15 @@ export const useGraphStore = defineStore('graph', () => {
         node.weights = [...(node.weights || []), ...additionalWeights];
       }
     });
+
+    // Adjust weights for the bias node as well
+    const bias = currentGraphState.value.biases[layer];
+    const currentWeightCount = bias.weights.length;
+    const nextLayerNodeCount = nextLayer.nodes.length;
+    if (currentWeightCount < nextLayerNodeCount) {
+      const additionalWeights = Array(nextLayerNodeCount - currentWeightCount).fill(1.0);
+      bias.weights = [...bias.weights, ...additionalWeights];
+    }
   };
   
 
@@ -92,9 +99,27 @@ export const useGraphStore = defineStore('graph', () => {
     }
   };
 
+  const updateBiasPos = (layer: number, x: number, y: number) => {
+    //console.log('updatePos', layer, index, x, y);
+    const node = currentGraphState.value.biases[layer];
+    if (node) {
+      node.x = x;
+      node.y = y;
+    }
+  };
+
   // ✅ Get node position
   const getNodePos = (layer: number, index: number): { x: number; y: number } => {
     const node = currentGraphState.value.layers[layer]?.nodes[index];
+    //console.log('getNodePos', layer, index, "| ", node.x, node.y);
+    return {
+      x: Number(node?.x ?? 0),
+      y: Number(node?.y ?? 0)
+    };
+  };
+
+  const getBiasPos = (bias : number): { x: number; y: number } => {
+    const node = currentGraphState.value.biases[bias];
     //console.log('getNodePos', layer, index, "| ", node.x, node.y);
     return {
       x: Number(node?.x ?? 0),
@@ -112,15 +137,15 @@ export const useGraphStore = defineStore('graph', () => {
     return currentGraphState.value.layers[layer];
 };
 
-    const getLayerNodeCount = (layer: number): number => {
-        if (layer > currentGraphState.value.layers.length) {
-            return 0;
-        }
-        return currentGraphState.value.layers[layer].nodes.length;
+  const getLayerNodeCount = (layer: number): number => {
+      if (layer > currentGraphState.value.layers.length) {
+          return 0;
+      }
+      return currentGraphState.value.layers[layer].nodes.length;
   };
 
   const totalNodeCount = computed(() => {
-    return currentGraphState.value.layers.reduce((total, layer) => {
+    return currentGraphState.value.layers.slice(0, hiddenLayerCount.value + 1).reduce((total, layer) => {
       return total + layer.nodes.length;
     }, 0);
   });
@@ -138,8 +163,10 @@ export const useGraphStore = defineStore('graph', () => {
     hiddenLayerCount,
     setHiddenLayerCount,
     updatePos,
+    updateBiasPos,
     updateLayerActivation,
     getNodePos,
+    getBiasPos,
     getLayerInfo,
     getLayerNodeCount,
     addNode,

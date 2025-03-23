@@ -8,6 +8,11 @@
                     :layer="layer - 1"
                     :index="nodeIndex - 1"
                     />
+
+                  <!-- Special nodespot for bias -->
+                  <NodeSpot v-if="(layer !== layerCount)"
+                    :bias="layer - 1"
+                  />
                 <label>{{ layer - 1 === 0 ? "Input" : layer == layerCount ? "Output" : `Layer ${layer - 1}` }}</label>
             </li>
         </ul>

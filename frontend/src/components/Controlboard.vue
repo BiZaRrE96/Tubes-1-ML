@@ -60,6 +60,25 @@
           </div>
         </div>
       </details>
+
+      <details v-if="index < visibleLayers.length - 1">
+        <summary>
+          <strong>Bias Layer {{ index }} - {{ index + 1 }}  </strong>
+          
+        </summary>
+
+        <div
+          v-for="(weight, weightIndex) in graph.currentGraphState.biases[index].weights"
+          :key="`bias-${index}-${weightIndex}`"
+        >
+          → to node {{ weightIndex }} in layer {{ index + 1 }}:
+          <input
+            type="number"
+            step="0.1"
+            v-model.number="graph.currentGraphState.biases[index].weights[weightIndex]"
+          />
+        </div>
+      </details>
     </div>
 
     <!-- Buttons to trigger actions -->

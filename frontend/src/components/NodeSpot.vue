@@ -1,13 +1,21 @@
 <template>
-    <div ref="el" class="node-spot">
-      <Node v-if="savedPos"
-        :layer="layer"
-        :index="index"
-        :value="`${layer}-${index}`"
-        :homePosition="targetPos"
-      />
-    </div>
-  </template>
+  <div ref="el" class="node-spot">
+    <Node
+      v-if="savedPos && props.layer !== undefined && props.index !== undefined"
+      :layer="props.layer"
+      :index="props.index"
+      :value="`${props.layer}-${props.index}`"
+      :homePosition="targetPos"
+    />
+
+    <Node
+      v-else-if="savedPos && props.bias !== undefined"
+      :bias="props.bias"
+      value="Bias"
+      :homePosition="targetPos"
+    />
+  </div>
+</template>
   
   <script setup lang="ts">
   import { ref, nextTick, onMounted, onUnmounted , watch, computed} from 'vue';
@@ -15,8 +23,9 @@
   import Node from './Node.vue';
   
   const props = defineProps<{
-    layer: number;
-    index: number;
+    layer?: number;
+    index?: number;
+    bias?: number; 
   }>();
   
   const el = ref<HTMLDivElement | null>(null);
@@ -32,10 +41,20 @@
         y: rect.top + rect.height / 2
       };
       targetPos.value = center;
-  
+      
       // Still store this in Pinia too for lines
-      store.updatePos(props.layer, props.index, center.x, center.y);
-      savedPos.value = true;
+      if (props.layer !== undefined && props.index !== undefined) {
+        store.updatePos(props.layer, props.index, center.x, center.y);
+        savedPos.value = true;
+        console.log("Layer node ",props.layer,"-",props.index,"updated!!");
+      }
+
+      else if (props.bias !== undefined) {
+        store.updateBiasPos(props.bias, center.x, center.y);
+        savedPos.value = true;
+        console.log("Bias node ",props.bias,"updated!!");
+      }
+
       //console.log("Node ",props.layer,"-",props.index,"updated!!");
     }
   };
@@ -82,4 +101,3 @@
     border: 1px dashed #ccc;
 }
 </style>
-  

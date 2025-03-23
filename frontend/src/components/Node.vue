@@ -11,23 +11,30 @@
   >
     {{ displayValue }}
   </div>
-
-  <LineConnector
+  <LineConnector v-if="props.layer !== undefined && props.index !== undefined && props.layer < store.hiddenLayerCount"
     v-for="target in nextTargets"
     :key="`from-${props.layer}-${props.index}-to-${target.index}`"
     :from="{ layer: props.layer, index: props.index }"
     :to="target"
   />
+
+  <LineConnector v-else-if="props.bias !== undefined"
+    v-for="target in nextTargets"
+    :key="`from-bias-${props.bias}-to-${target.index}`"
+    :from="{ bias: props.bias }"
+    :to="target"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watchEffect } from 'vue';
+import { ref, onMounted, onUnmounted, watchEffect, nextTick } from 'vue';
 import { useGraphStore } from '@/stores/graphStore';
 import LineConnector from './LineConnector.vue';
 
 const props = defineProps<{
-  layer: number;
-  index: number;
+  layer?: number;
+  index?: number;
+  bias?: number;
   value?: number | string;
   homePosition: {
     x: number;
@@ -47,9 +54,12 @@ let offset = { x: 0, y: 0 };
 const nextTargets = ref<{ layer: number; index: number }[]>([]);
 
 watchEffect(() => {
-  const nextLayer = props.layer + 1;
 
-  if (nextLayer >= store.currentGraphState.layers.length) {
+  const nextLayer = props.layer?.valueOf() !== undefined ? props.layer + 1 : props.bias?.valueOf() !== undefined ? props.bias + 1 : -1;
+
+  console.log("Node setup of",props.value, "Next layers :", nextLayer, store.currentGraphState.layers.length);
+
+  if (nextLayer >= store.currentGraphState.layers.length || nextLayer < 0) {
     nextTargets.value = []; // no lines from output layer
     return;
   }
@@ -60,6 +70,8 @@ watchEffect(() => {
   for (let i = 0; i < count; i++) {
     nextTargets.value.push({ layer: nextLayer, index: i });
   }
+
+  console.log("Nodesetup of",props.value,nextLayer, count, nextTargets.value);
 });
 
 // 🟢 Start drag
@@ -79,13 +91,16 @@ const onDrag = (e: MouseEvent) => {
   position.value.x = e.clientX - offset.x;
   position.value.y = e.clientY - offset.y;
 
-  store.updatePos(props.layer, props.index, position.value.x, position.value.y);
+  if (props.layer !== undefined && props.index !== undefined) {
+    store.updatePos(props.layer, props.index, position.value.x, position.value.y);
+  } else if (props.bias !== undefined) {
+    store.updateBiasPos(props.bias, position.value.x, position.value.y);
+  }
 };
 
 // 🟢 Stop drag
 const stopDrag = () => {
   dragging.value = false;
-  store.updatePos(props.layer, props.index, position.value.x, position.value.y);
 
   document.body.style.userSelect = '';
   window.removeEventListener('mousemove', onDrag);
@@ -103,7 +118,11 @@ const driftBack = () => {
       position.value.x += dx * 0.1;
       position.value.y += dy * 0.1;
 
-      store.updatePos(props.layer, props.index, position.value.x, position.value.y);
+      if (props.layer !== undefined && props.index !== undefined) {
+        store.updatePos(props.layer, props.index, position.value.x, position.value.y);
+      } else if (props.bias !== undefined) {
+        store.updateBiasPos(props.bias, position.value.x, position.value.y);
+      }
     }
   }
 
@@ -111,9 +130,16 @@ const driftBack = () => {
 };
 
 // 🔃 On mount
-onMounted(() => {
+onMounted(async () => {
+  await nextTick();
+  console.log("Node setup of",props);
   position.value = { ...props.homePosition };
   rafId = requestAnimationFrame(driftBack);
+  if (props.layer !== undefined && props.index !== undefined) {
+    store.updatePos(props.layer, props.index, position.value.x, position.value.y);
+  } else if (props.bias !== undefined) {
+    store.updateBiasPos(props.bias, position.value.x, position.value.y);
+  }
 });
 
 onUnmounted(() => cancelAnimationFrame(rafId));
