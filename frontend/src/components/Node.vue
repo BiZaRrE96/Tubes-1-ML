@@ -57,7 +57,7 @@ watchEffect(() => {
 
   const nextLayer = props.layer?.valueOf() !== undefined ? props.layer + 1 : props.bias?.valueOf() !== undefined ? props.bias + 1 : -1;
 
-  console.log("Node setup of",props.value, "Next layers :", nextLayer, store.currentGraphState.layers.length);
+  // console.log("Node setup of",props.value, "Next layers :", nextLayer, store.currentGraphState.layers.length);
 
   if (nextLayer >= store.currentGraphState.layers.length || nextLayer < 0) {
     nextTargets.value = []; // no lines from output layer
@@ -71,7 +71,7 @@ watchEffect(() => {
     nextTargets.value.push({ layer: nextLayer, index: i });
   }
 
-  console.log("Nodesetup of",props.value,nextLayer, count, nextTargets.value);
+  // console.log("Nodesetup of",props.value,nextLayer, count, nextTargets.value);
 });
 
 // 🟢 Start drag
@@ -132,7 +132,7 @@ const driftBack = () => {
 // 🔃 On mount
 onMounted(async () => {
   await nextTick();
-  console.log("Node setup of",props);
+  // console.log("Node setup of",props);
   position.value = { ...props.homePosition };
   rafId = requestAnimationFrame(driftBack);
   if (props.layer !== undefined && props.index !== undefined) {

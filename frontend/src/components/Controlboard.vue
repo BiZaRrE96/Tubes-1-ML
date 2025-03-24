@@ -92,7 +92,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useGraphStore } from '@/stores/graphStore';
-import { sendConfigToBackend, getGraphFromBackend, exportGraph, importGraph } from '@/utils/graphInterface'; // Assuming utils
+import { sendConfigToBackend, getGraphFromBackend, exportGraph, importFromFile as iff } from '@/utils/graphInterface'; // Assuming utils
 
 const graph = useGraphStore();
 const position = ref({ x: 50, y: 50 });
@@ -150,11 +150,12 @@ const sendToBackend = async () => {
 
 const getFromBackend = async () => {
   const data = await getGraphFromBackend();
+  
   console.log('Received graph from backend:', data);
 };
 
 const importFromFile = async () => {
-  const data = await importGraph();
+  const data = await iff();
   console.log('Imported graph:', data);
 };
 

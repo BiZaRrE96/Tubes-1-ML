@@ -6,7 +6,7 @@ import type { GraphState, Layer, Node } from '../types/graphType';  // Import th
 export const useGraphStore = defineStore('graph', () => {
   
   const currentGraphState: Ref<GraphState> = ref({ 
-    layers: [{nodes : [{}]},{nodes : [{}]}],
+    layers: [{nodes : [{}], activation : "linear"},{nodes : [{}], activation : "linear"}],
     biases: [{value: 1, weights:[1.0]}]});
   const hiddenLayerCount = ref(1);
 

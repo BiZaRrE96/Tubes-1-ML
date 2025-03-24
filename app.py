@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from pydantic import BaseModel
 from typing import List, Optional
@@ -8,7 +8,7 @@ import pickle
 import os
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Define the shared types for Graph, Layer, and Node
 class Node(BaseModel):
@@ -70,42 +70,50 @@ def get_graph():
         
         return create_response('No graph data available', 404)
 
+    retval = nn_to_json(graph_data)
     # Send the graph data as JSON
-    return graph_data.model_dump_json() # Use .dict() to convert Pydantic model to dict
+    return retval
 
 
-# Route to export the current graph to a file
 @app.route('/api/export', methods=['POST'])
 def export_graph():
-    """Export the current graph to a file."""
+    """Export the current graph to a file and prompt for download."""
     try:
         if graph_data is None:
-            return create_response('No graph data to export', 404)
-        
+            return jsonify({'error': 'No graph data to export'}), 404
+
         with open(GRAPH_FILE, 'wb') as f:
-            pickle.dump(graph_data, f)
+            pickle.dump(graph_data, f, protocol=pickle.HIGHEST_PROTOCOL)
         
-        return create_response(f'Graph exported to {GRAPH_FILE} successfully.')
+        return send_file(GRAPH_FILE, as_attachment=True, mimetype='application/octet-stream')
     except Exception as e:
-        return create_response(f"Error exporting graph: {str(e)}", 400)
+        return jsonify({'error': f"Error exporting graph: {str(e)}"}), 400
 
-
-# Route to import the graph from a file
 @app.route('/api/import', methods=['POST'])
 def import_graph():
     """Import the graph from a file."""
     global graph_data
     try:
-        if os.path.exists(GRAPH_FILE):
-            with open(GRAPH_FILE, 'rb') as f:
-                graph_data = pickle.load(f)
-            
-            return create_response('Graph imported successfully.')
-        else:
-            return create_response(f'{GRAPH_FILE} not found.', 404)
+        # Check if the file is part of the request
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        
+        # If a file is provided, load the graph from it
+        with open(GRAPH_FILE, 'wb') as f:
+            file.save(f)  # Save the uploaded file
+        
+        # Now load the graph data
+        with open(GRAPH_FILE, 'rb') as f:
+            graph_data = pickle.load(f)
+        
+        return jsonify({'message': 'Graph imported successfully.'}), 200
     except Exception as e:
-        return create_response(f"Error importing graph: {str(e)}", 400)
-
+        return jsonify({'error': f"Error importing graph: {str(e)}"}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)

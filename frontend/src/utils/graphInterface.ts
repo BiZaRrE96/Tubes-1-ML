@@ -1,6 +1,7 @@
 // graphInterface.ts
 
 import type { GraphState } from '../types/graphType';  // Import GraphState from the shared types
+import { useGraphStore } from '@/stores/graphStore';
 
 // Function to send config to the backend
 export const sendConfigToBackend = async (graph: GraphState): Promise<any> => {
@@ -26,6 +27,9 @@ export const getGraphFromBackend = async (): Promise<GraphState | null> => {
       method: 'GET',
     });
     const data: GraphState = await response.json();  // Use GraphState to type the response
+    const store = useGraphStore();
+    store.currentGraphState = data;
+    store.hiddenLayerCount = data.layers.length - 1;
     return data;
   } catch (error) {
     console.error('Error fetching graph from backend:', error);
@@ -33,29 +37,71 @@ export const getGraphFromBackend = async (): Promise<GraphState | null> => {
   }
 };
 
-// Export graph data to file
+
+// Export graph data to file (download the graph file from backend)
 export const exportGraph = async (): Promise<void> => {
   try {
     const response = await fetch('http://localhost:5000/api/export', {
       method: 'POST',
     });
-    const data = await response.json();
-    console.log('Exported graph:', data);
+    
+    if (response.ok) {
+      const blob = await response.blob();  // Get the file blob
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'graph_model.pkl';  // Name of the file to download
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } else {
+      const data = await response.json();
+      console.error('Error exporting graph:', data.error);
+    }
   } catch (error) {
     console.error('Error exporting graph:', error);
   }
 };
 
-// Import graph data from file
-export const importGraph = async (): Promise<GraphState | null> => {
+// Import graph data from file (upload a graph file to the backend)
+const importGraph = async (file: File): Promise<GraphState | null> => {
   try {
+    const formData = new FormData();
+    formData.append('file', file);
+
     const response = await fetch('http://localhost:5000/api/import', {
       method: 'POST',
+      body: formData,  // Send the file as form data
     });
+
     const data: GraphState = await response.json();  // Use GraphState to type the response
-    return data;
+    if (response.ok) {
+      return data;
+    } else {
+      console.error('Error importing graph:', response.statusText);
+      return null;
+    }
   } catch (error) {
     console.error('Error importing graph:', error);
-    return null
+    return null;
   }
+};
+
+export const importFromFile = async () => {
+  // Create a file input element dynamically
+  const input = document.createElement('input');
+  input.type = 'file';  // Set the input type to 'file'
+
+  // Trigger the file dialog when the input is clicked
+  input.click();
+
+  // When a file is selected, import it
+  input.onchange = async () => {
+    const file = input.files?.[0];  // Get the selected file
+
+    if (file) {
+      // Call the importGraph function and pass the selected file
+      const data = await importGraph(file);
+      console.log('Imported graph:', data);
+    }
+  };
 };

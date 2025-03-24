@@ -46,13 +46,13 @@
       if (props.layer !== undefined && props.index !== undefined) {
         store.updatePos(props.layer, props.index, center.x, center.y);
         savedPos.value = true;
-        console.log("Layer node ",props.layer,"-",props.index,"updated!!");
+        // console.log("Layer node ",props.layer,"-",props.index,"updated!!");
       }
 
       else if (props.bias !== undefined) {
         store.updateBiasPos(props.bias, center.x, center.y);
         savedPos.value = true;
-        console.log("Bias node ",props.bias,"updated!!");
+        // console.log("Bias node ",props.bias,"updated!!");
       }
 
       //console.log("Node ",props.layer,"-",props.index,"updated!!");
