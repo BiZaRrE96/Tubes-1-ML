@@ -18,6 +18,26 @@
     </label>
 
     <hr />
+    <div>
+      <label>
+        Learning Rate:
+        <input type="number" step="0.01" v-model.number="learningRate" />
+      </label>
+    </div>
+
+    <div>
+      <label>
+        Batch Size:
+        <input type="number" step="1" v-model.number="batchSize" />
+      </label>
+    </div>
+
+    <div>
+      <label>
+        Epochs:
+        <input type="number" step="1" v-model.number="epochs" />
+      </label>
+    </div>
 
     <div v-for="(layer, index) in visibleLayers" :key="index">
       <details>
@@ -75,29 +95,40 @@
           <input
             type="number"
             step="0.1"
-            v-model.number="graph.currentGraphState.biases[index].weights[weightIndex]"
+            v-model.number="learningRate"
           />
         </div>
       </details>
     </div>
-
+    
     <!-- Buttons to trigger actions -->
+    <button @click="initializeWeights">Initialize Weights</button>
+    <button @click="startLearning">Start Learning</button>
     <button @click="sendToBackend">Send to Backend</button>
     <button @click="getFromBackend">Get from Backend</button>
     <button @click="importFromFile">Import from File</button>
     <button @click="exportToFile">Export to File</button>
+
+    <div v-if="verboseData">
+      <h3>Verbose Data:</h3>
+      <pre>{{ verboseData }}</pre>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useGraphStore } from '@/stores/graphStore';
-import { sendConfigToBackend, getGraphFromBackend, exportGraph, importFromFile as iff } from '@/utils/graphInterface'; // Assuming utils
+import { sendConfigToBackend, getGraphFromBackend, exportGraph, importFromFile as iff, initializeWeightsOnBackend, startLearningOnBackend } from '@/utils/graphInterface';
 
 const graph = useGraphStore();
 const position = ref({ x: 50, y: 50 });
 let dragging = false;
 let offset = { x: 0, y: 0 };
+const learningRate = ref(0.01);
+const batchSize = ref(32);
+const epochs = ref(10);
+const verboseData = ref(null);
 
 const startDrag = (e: MouseEvent) => {
   if (['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT', 'LABEL'].includes(e.target.tagName)) return;
@@ -167,6 +198,24 @@ const exportToFile = async () => {
 graph.currentGraphState.layers.forEach((layer, index) => {
   activationModels.value[index] = layer.activation ?? 'linear'; // Default to 'linear'
 });
+
+const initializeWeights = async () => {
+  await initializeWeightsOnBackend();
+  console.log('Weights initialized on backend');
+};
+
+const startLearning = async () => {
+  const data = await startLearningOnBackend({
+    learningRate: learningRate.value,
+    batchSize: batchSize.value,
+    epochs: epochs.value,
+    hiddenLayerCount: graph.hiddenLayerCount,
+    activationFunctions: activationModels.value,
+  });
+  verboseData.value = data;
+  console.log('Learning started on backend');
+};
+
 </script>
 
 <style scoped>
