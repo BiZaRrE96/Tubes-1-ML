@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from typing import List, Optional
 from NeuralNetwork import NNetwork
 from NN_Json_Util import json_to_nn, nn_to_json
+import numpy as np
+from main import train_model, plot_training_history
 import pickle
 import os
 
@@ -114,6 +116,57 @@ def import_graph():
         return jsonify({'message': 'Graph imported successfully.'}), 200
     except Exception as e:
         return jsonify({'error': f"Error importing graph: {str(e)}"}), 400
+
+@app.route('/api/initialize_weights', methods=['POST'])
+def initialize_weights():
+    """Inisialisasi bobot jaringan saraf."""
+    try:
+        if graph_data is None:
+            return create_response('No graph data available', 404)
+
+        graph_data.initialize_weights(method="xavier", seed=42)
+        return create_response('Weights initialized successfully')
+    except Exception as e:
+        return create_response(f"Error initializing weights: {str(e)}", 400)
+
+@app.route('/api/start_learning', methods=['POST'])
+def start_learning():
+    """Memulai proses pembelajaran jaringan saraf."""
+    try:
+        data = request.get_json()
+        learning_rate = data.get('learningRate', 0.01)
+        batch_size = data.get('batchSize', 32)
+        epochs = data.get('epochs', 10)
+        hidden_layer_count = data.get('hiddenLayerCount', 1)
+        activation_functions = data.get('activationFunctions', ["relu"] * hidden_layer_count + ["softmax"])
+
+        if graph_data is None:
+            return create_response('No graph data available', 404)
+
+        X_train = np.array([
+            [0, 0], [0, 1], [1, 0], [1, 1]
+        ])
+        y_train = np.array([
+            [0], [1], [1], [0]
+        ])
+
+        X_val = np.array([
+            [0, 0], [0, 1], [1, 0], [1, 1]
+        ])
+        y_val = np.array([
+            [0], [1], [1], [0]
+        ])
+
+
+        # Inisialisasi model
+        model = NNetwork(num_of_layers=hidden_layer_count + 2, layer_sizes=[2] + [4] * hidden_layer_count + [2], activation_functions=activation_functions, verbose=True)
+        model.initialize_weights(method="xavier", seed=42)
+
+        # Training model
+        history = train_model(model, X_train, y_train, X_val, y_val, batch_size=batch_size, learning_rate=learning_rate, epochs=epochs, verbose=1)
+        return create_response('Learning started successfully', data=history)
+    except Exception as e:
+        return create_response(f"Error starting learning: {str(e)}", 400)
 
 if __name__ == '__main__':
     app.run(debug=True)

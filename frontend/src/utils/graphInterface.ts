@@ -105,3 +105,31 @@ export const importFromFile = async () => {
     }
   };
 };
+
+export const initializeWeightsOnBackend = async (): Promise<void> => {
+  try {
+    const response = await fetch('http://localhost:5000/api/initialize_weights', {
+      method: 'POST',
+    });
+    const data = await response.json();
+    console.log('Weights initialized:', data);
+  } catch (error) {
+    console.error('Error initializing weights on backend:', error);
+  }
+};
+
+export const startLearningOnBackend = async (learningRate: number): Promise<void> => {
+  try {
+    const response = await fetch('http://localhost:5000/api/start_learning', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ learningRate }),
+    });
+    const data = await response.json();
+    console.log('Learning started:', data);
+  } catch (error) {
+    console.error('Error starting learning on backend:', error);
+  }
+};
