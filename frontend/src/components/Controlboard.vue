@@ -126,7 +126,7 @@ const position = ref({ x: 50, y: 50 });
 let dragging = false;
 let offset = { x: 0, y: 0 };
 const learningRate = ref(0.01);
-const batchSize = ref(32);
+const batchSize = ref(4);
 const epochs = ref(10);
 const verboseData = ref(null);
 
@@ -212,8 +212,11 @@ const startLearning = async () => {
     hiddenLayerCount: graph.hiddenLayerCount,
     activationFunctions: activationModels.value,
   });
-  verboseData.value = data;
-  console.log('Learning started on backend');
+
+  if (data) {
+    verboseData.value = data; // Tampilkan data verbose di frontend
+    console.log('Learning started on backend:', data);
+  }
 };
 
 </script>

@@ -118,18 +118,41 @@ export const initializeWeightsOnBackend = async (): Promise<void> => {
   }
 };
 
-export const startLearningOnBackend = async (learningRate: number): Promise<void> => {
+export const startLearningOnBackend = async (params: {
+  learningRate: number;
+  batchSize: number;
+  epochs: number;
+  hiddenLayerCount: number;
+  activationFunctions: string[];
+}): Promise<any> => {
   try {
+    console.log('Sending parameters to backend:', params); // Debugging
     const response = await fetch('http://localhost:5000/api/start_learning', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ learningRate }),
+      body: JSON.stringify(params),
     });
+
+    if (!response.ok) {
+      let errorMessage = "An unknown error occurred"; // Default error message
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage; // Use backend message if available
+      } catch (e) {
+        // If JSON parsing fails, retain the default message
+        console.error("Error parsing error response:", e);
+      }
+      console.error('Error starting learning on backend:', errorMessage);
+      return null;
+    }
+
     const data = await response.json();
     console.log('Learning started:', data);
+    return data;
   } catch (error) {
     console.error('Error starting learning on backend:', error);
+    return null;
   }
 };

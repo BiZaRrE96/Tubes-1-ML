@@ -131,14 +131,19 @@ def initialize_weights():
 
 @app.route('/api/start_learning', methods=['POST'])
 def start_learning():
-    """Memulai proses pembelajaran jaringan saraf."""
     try:
         data = request.get_json()
         learning_rate = data.get('learningRate', 0.01)
-        batch_size = data.get('batchSize', 32)
+        batch_size = data.get('batchSize', 4)
         epochs = data.get('epochs', 10)
         hidden_layer_count = data.get('hiddenLayerCount', 1)
         activation_functions = data.get('activationFunctions', ["relu"] * hidden_layer_count + ["softmax"])
+
+        if batch_size <= 0:
+            return create_response('Batch size harus lebih besar dari nol', 400)
+        
+        if len(activation_functions) != hidden_layer_count + 1:
+            return create_response('Jumlah fungsi aktivasi tidak sesuai dengan jumlah layer', 400)
 
         if graph_data is None:
             return create_response('No graph data available', 404)
@@ -156,7 +161,12 @@ def start_learning():
         y_val = np.array([
             [0], [1], [1], [0]
         ])
+        
+        if batch_size > len(X_train):
+            return create_response('Batch size tidak boleh lebih besar dari jumlah data', 400)
 
+        if X_train.shape[0] != y_train.shape[0]:
+            return create_response('Jumlah sampel pada X_train dan y_train tidak sesuai', 400)
 
         # Inisialisasi model
         model = NNetwork(num_of_layers=hidden_layer_count + 2, layer_sizes=[2] + [4] * hidden_layer_count + [2], activation_functions=activation_functions, verbose=True)

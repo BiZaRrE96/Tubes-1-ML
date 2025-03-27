@@ -329,6 +329,9 @@ class NNetwork:
         Melakukan backward propagation dan memperbarui bobot menggunaka Gradient Descent."""
         batch_size = inputs.shape[0]
 
+        if batch_size == 0:
+            raise ValueError("Batch size tidak boleh nol")
+
         if len(inputs.shape) == 1:
             inputs = inputs.reshape(1, -1)
 
@@ -379,7 +382,6 @@ class NNetwork:
             
             weights_next_layer = np.array([node.weights for node in self.layers[layer_idx + 1]])
             errors[layer_idx] = np.dot(error_signal, weights_next_layer) * activation_derivative
-
 
         for layer_idx in range(1, len(self.layers)):
             prev_activation = activations[layer_idx - 1]
