@@ -36,13 +36,14 @@ class NNetwork:
 
         if activation_functions is None:
             activation_functions = ["sigmoid"] * (num_of_layers - 2) + ["softmax"]  # Default: Sigmoid untuk hidden, Softmax untuk output
-        elif len(activation_functions) != num_of_layers - 1:
-            raise ValueError(f"Jumlah fungsi aktivasi harus {num_of_layers - 1}, bukan {len(activation_functions)}.")
+        elif len(activation_functions) != num_of_layers-1:
+            raise ValueError(f"Jumlah fungsi aktivasi harus {num_of_layers-1}, bukan {len(activation_functions)}.")
         self.activation_functions = activation_functions
 
         # Inisialisasi layer
         self.layers: list[list[NNode]] = []
-        for i in range(num_of_layers):
+        for i in range(len(layer_sizes)):
+            print("inisiasi layer", i)
             layer = [
                 NNode(
                     weights=np.random.randn(layer_sizes[i-1]) if i > 0 else [],  
@@ -50,8 +51,10 @@ class NNetwork:
                 )
                 for _ in range(layer_sizes[i])
             ]
+            print("inisiasi node selesai")
             self.layers.append(layer)
-
+        print("inisiasi layer selesai")
+        
         # Print Struktur Jika Verbose
         if self.verbose:
             print(f"✅ Jaringan saraf dengan {num_of_layers} layer berhasil dibuat!")

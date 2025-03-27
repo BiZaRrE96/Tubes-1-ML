@@ -138,7 +138,15 @@ def start_learning():
         epochs = data.get('epochs', 10)
         hidden_layer_count = data.get('hiddenLayerCount', 1)
         activation_functions = data.get('activationFunctions', ["relu"] * hidden_layer_count + ["softmax"])
-
+        activation_functions_list = [activation_functions[str(i)] for i in range(len(activation_functions))]
+        
+        print(data.get('learningRate', learning_rate))
+        print(data.get('batchSize', batch_size))
+        print(data.get('epochs', epochs))
+        print(data.get('hiddenLayerCount', hidden_layer_count))
+        print(data.get('activationFunctionsList', activation_functions_list))
+    
+        
         if batch_size <= 0:
             return create_response('Batch size harus lebih besar dari nol', 400)
         
@@ -148,19 +156,19 @@ def start_learning():
         if graph_data is None:
             return create_response('No graph data available', 404)
 
-        X_train = np.array([
-            [0, 0], [0, 1], [1, 0], [1, 1]
-        ])
-        y_train = np.array([
-            [0], [1], [1], [0]
-        ])
+        # Ambil jumlah node per layer
+        TEMP = [len(layer) for layer in graph_data.layers]
+        print("Jumlah node per layer (TEMP):", TEMP)
+        
+        input_node_count = TEMP[0]
+        output_node_count = TEMP[-1]
+        
+        num_samples = 4  # Jumlah sampel (bisa disesuaikan)
+        X_train = np.random.rand(num_samples, input_node_count)  # Data input dengan shape (num_samples, input_node_count)
+        y_train = np.random.randint(0, 2, size=(num_samples, output_node_count))  # Data output dengan shape (num_samples, output_node_count)
 
-        X_val = np.array([
-            [0, 0], [0, 1], [1, 0], [1, 1]
-        ])
-        y_val = np.array([
-            [0], [1], [1], [0]
-        ])
+        X_val = np.random.rand(num_samples, input_node_count)  # Data validasi input
+        y_val = np.random.randint(0, 2, size=(num_samples, output_node_count))
         
         if batch_size > len(X_train):
             return create_response('Batch size tidak boleh lebih besar dari jumlah data', 400)
@@ -169,11 +177,14 @@ def start_learning():
             return create_response('Jumlah sampel pada X_train dan y_train tidak sesuai', 400)
 
         # Inisialisasi model
-        model = NNetwork(num_of_layers=hidden_layer_count + 2, layer_sizes=[2] + [4] * hidden_layer_count + [2], activation_functions=activation_functions, verbose=True)
+        model = NNetwork(num_of_layers=hidden_layer_count + 2, layer_sizes=TEMP, activation_functions=activation_functions_list, verbose=True)
+        print("sudah inisiasi")
         model.initialize_weights(method="xavier", seed=42)
+        
 
         # Training model
         history = train_model(model, X_train, y_train, X_val, y_val, batch_size=batch_size, learning_rate=learning_rate, epochs=epochs, verbose=1)
+        
         return create_response('Learning started successfully', data=history)
     except Exception as e:
         return create_response(f"Error starting learning: {str(e)}", 400)
