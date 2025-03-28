@@ -53,14 +53,14 @@ def train_model(model, X_train, y_train, X_val, y_val, batch_size=32, learning_r
     return history
 
 
-def plot_training_history(history, base_dir="hasil", filename="training_history.png"):
+def plot_training_history(history, base_dir="hasil"):
     """Plot training history and save to a dynamically created folder."""
     # Cari folder dengan angka berikutnya yang belum ada
     i = 1
     while os.path.exists(f"{base_dir}/{i}"):
         i += 1
 
-    # Buat folder baru
+    filename = f"training_history_{i}.png"
     folder_path = f"{base_dir}/{i}"
     os.makedirs(folder_path, exist_ok=True)
 
@@ -78,9 +78,10 @@ def plot_training_history(history, base_dir="hasil", filename="training_history.
     plt.close()  # Tutup plot untuk menghindari masalah GUI
 
     # Simpan data verbose ke file teks
-    verbose_file_path = os.path.join(folder_path, "verbose.txt")
+    verbosename = f"verbose_{i}.txt"
+    verbose_file_path = os.path.join(folder_path, verbosename)
     with open(verbose_file_path, "w") as f:
-        f.write(json.dumps(history, indent=4))  # Simpan data history dalam format JSON
+        f.write(json.dumps(history, indent=4))
 
     print(f"Plot saved to: {file_path}")
     print(f"Verbose data saved to: {verbose_file_path}")

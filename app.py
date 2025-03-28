@@ -167,11 +167,11 @@ def start_learning():
         input_node_count = TEMP[0]
         output_node_count = TEMP[-1]
         
-        num_samples = 4  # Jumlah sampel (bisa disesuaikan)
-        X_train = np.random.rand(num_samples, input_node_count)  # Data input dengan shape (num_samples, input_node_count)
-        y_train = np.random.randint(0, 2, size=(num_samples, output_node_count))  # Data output dengan shape (num_samples, output_node_count)
+        num_samples = batch_size
+        X_train = np.random.rand(num_samples, input_node_count)
+        y_train = np.random.randint(0, 2, size=(num_samples, output_node_count))
 
-        X_val = np.random.rand(num_samples, input_node_count)  # Data validasi input
+        X_val = np.random.rand(num_samples, input_node_count)
         y_val = np.random.randint(0, 2, size=(num_samples, output_node_count))
         
         if batch_size > len(X_train):
@@ -187,7 +187,7 @@ def start_learning():
         
         # Training model
         history = train_model(model, X_train, y_train, X_val, y_val, batch_size=batch_size, learning_rate=learning_rate, epochs=epochs, verbose=1)
-        plot_training_history(history, filename="training_history.png")
+        plot_training_history(history)
         
         return create_response('Learning started successfully', data=history)
     except Exception as e:
