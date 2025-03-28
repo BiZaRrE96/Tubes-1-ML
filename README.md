@@ -28,8 +28,9 @@ to make all of this, a person's might is not enough, so this is what we did
 
 |   NIM    |          Nama          |         Task         |
 | :------: | :--------------------: | :------------------: |
-| 13522130 | Justin Aditya Putra P. |             |
+| 13522130 | Justin Aditya Putra P. |   - Data structure|
+|||- GUI|
 | 13522155 |  Axel Santadi Warih    | -help frontend    |
 |||- learn|
 |||-initiate weight|
-| 13522163 | Atqiya Haydar Luqman   |       |
+| 13522163 | Atqiya Haydar Luqman   | - Mengerjakan semua kebutuhan fungsi yang ada di spesifikasi       |
