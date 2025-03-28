@@ -184,10 +184,19 @@ def start_learning():
 
         # Training model
         history = train_model(model, X_train, y_train, X_val, y_val, batch_size=batch_size, learning_rate=learning_rate, epochs=epochs, verbose=1)
+        plot_training_history(history, filename="training_history.png")
         
         return create_response('Learning started successfully', data=history)
     except Exception as e:
         return create_response(f"Error starting learning: {str(e)}", 400)
+    
+@app.route('/api/get_training_plot', methods=['GET'])
+def get_training_plot():
+    """Send the training plot to the frontend."""
+    try:
+        return send_file("training_history.png", mimetype='image/png', as_attachment=True)
+    except Exception as e:
+        return create_response(f"Error sending training plot: {str(e)}", 400)
 
 if __name__ == '__main__':
     app.run(debug=True)

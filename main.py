@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm  
 from NeuralNetwork import NNetwork 
+import os
+import json
 
 def train_model(model, X_train, y_train, X_val, y_val, batch_size=32, learning_rate=0.01, epochs=10, verbose=1):
     """
@@ -51,17 +53,38 @@ def train_model(model, X_train, y_train, X_val, y_val, batch_size=32, learning_r
     return history
 
 
-def plot_training_history(history):
-    """Menampilkan grafik training loss dan validation loss per epoch."""
+def plot_training_history(history, base_dir="hasil", filename="training_history.png"):
+    """Plot training history and save to a dynamically created folder."""
+    # Cari folder dengan angka berikutnya yang belum ada
+    i = 1
+    while os.path.exists(f"{base_dir}/{i}"):
+        i += 1
+
+    # Buat folder baru
+    folder_path = f"{base_dir}/{i}"
+    os.makedirs(folder_path, exist_ok=True)
+
+    # Simpan plot ke file di folder tersebut
+    file_path = os.path.join(folder_path, filename)
     plt.figure(figsize=(10, 5))
     plt.plot(history["train_loss"], label="Training Loss", marker="o")
     plt.plot(history["val_loss"], label="Validation Loss", marker="s")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Loss')
     plt.legend()
-    plt.title("Training vs Validation Loss")
-    plt.grid(True, linestyle="--", alpha=0.5)
-    plt.show()
+    plt.grid(True)
+    plt.savefig(file_path)  # Simpan plot ke file
+    plt.close()  # Tutup plot untuk menghindari masalah GUI
+
+    # Simpan data verbose ke file teks
+    verbose_file_path = os.path.join(folder_path, "verbose.txt")
+    with open(verbose_file_path, "w") as f:
+        f.write(json.dumps(history, indent=4))  # Simpan data history dalam format JSON
+
+    print(f"Plot saved to: {file_path}")
+    print(f"Verbose data saved to: {verbose_file_path}")
+    return folder_path
 
 
 if __name__ == "__main__":
