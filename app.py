@@ -124,8 +124,11 @@ def initialize_weights():
         if graph_data is None:
             return create_response('No graph data available', 404)
 
-        graph_data.initialize_weights(method="xavier", seed=42)
-        return create_response('Weights initialized successfully')
+        data = request.get_json()
+        method = data.get('method', 'zero')
+
+        graph_data.initialize_weights(method=method, seed=42)
+        return create_response(f'Weights initialized successfully with method: {method}')
     except Exception as e:
         return create_response(f"Error initializing weights: {str(e)}", 400)
 
@@ -139,6 +142,7 @@ def start_learning():
         hidden_layer_count = data.get('hiddenLayerCount', 1)
         activation_functions = data.get('activationFunctions', ["relu"] * hidden_layer_count + ["softmax"])
         activation_functions_list = [activation_functions[str(i)] for i in range(len(activation_functions))]
+        initializeWeightMethod = data.get('initializeWeightMethod', 'zero')
         
         print(data.get('learningRate', learning_rate))
         print(data.get('batchSize', batch_size))
@@ -179,9 +183,8 @@ def start_learning():
         # Inisialisasi model
         model = NNetwork(num_of_layers=hidden_layer_count + 2, layer_sizes=TEMP, activation_functions=activation_functions_list, verbose=True)
         print("sudah inisiasi")
-        model.initialize_weights(method="xavier", seed=42)
+        model.initialize_weights(method=initializeWeightMethod, seed=42)
         
-
         # Training model
         history = train_model(model, X_train, y_train, X_val, y_val, batch_size=batch_size, learning_rate=learning_rate, epochs=epochs, verbose=1)
         plot_training_history(history, filename="training_history.png")

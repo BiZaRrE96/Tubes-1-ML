@@ -31,6 +31,19 @@
         <input type="number" step="1" v-model.number="batchSize" />
       </label>
     </div>
+    
+    <div>
+      <label>
+        Initialize Weight Method:
+        <select v-model="initializeWeightMethod">
+          <option value="zero">Zero</option>
+          <option value="uniform">Uniform</option>
+          <option value="normal">Normal</option>
+          <option value="xavier">Xavier</option>
+          <option value="he">He</option>
+        </select>
+      </label>
+    </div>
 
     <div>
       <label>
@@ -102,16 +115,14 @@
     </div>
     
     <!-- Buttons to trigger actions -->
-    <button @click="initializeWeights">Initialize Weights</button>
-    <button @click="startLearning">Start Learning</button>
     <button @click="sendToBackend">Send to Backend</button>
+    <button @click="startLearning">Start Learning</button>
     <button @click="getFromBackend">Get from Backend</button>
     <button @click="importFromFile">Import from File</button>
     <button @click="exportToFile">Export to File</button>
 
     <div v-if="verboseData">
-      <h3>Verbose Data:</h3>
-      <pre>{{ verboseData }}</pre>
+      <h3>Verbose Data And Training History has been saved!</h3>
     </div>
   </div>
 </template>
@@ -129,6 +140,7 @@ const learningRate = ref(0.01);
 const batchSize = ref(4);
 const epochs = ref(10);
 const verboseData = ref(null);
+const initializeWeightMethod = ref('zero');
 
 const startDrag = (e: MouseEvent) => {
   if (['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT', 'LABEL'].includes(e.target.tagName)) return;
@@ -200,8 +212,8 @@ graph.currentGraphState.layers.forEach((layer, index) => {
 });
 
 const initializeWeights = async () => {
-  await initializeWeightsOnBackend();
-  console.log('Weights initialized on backend');
+  await initializeWeightsOnBackend(initializeWeightMethod.value); // Pass the selected method
+  console.log(`Weights initialized on backend with method: ${initializeWeightMethod.value}`);
 };
 
 const startLearning = async () => {
@@ -211,6 +223,7 @@ const startLearning = async () => {
     epochs: epochs.value,
     hiddenLayerCount: graph.hiddenLayerCount,
     activationFunctions: activationModels.value,
+    initializeWeightMethod: initializeWeightMethod.value,
   });
 
   if (data) {

@@ -106,10 +106,14 @@ export const importFromFile = async () => {
   };
 };
 
-export const initializeWeightsOnBackend = async (): Promise<void> => {
+export const initializeWeightsOnBackend = async (method: string): Promise<void> => {
   try {
     const response = await fetch('http://localhost:5000/api/initialize_weights', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ method }), // Send the selected method to the backend
     });
     const data = await response.json();
     console.log('Weights initialized:', data);
@@ -124,6 +128,7 @@ export const startLearningOnBackend = async (params: {
   epochs: number;
   hiddenLayerCount: number;
   activationFunctions: string[];
+  initializeWeightMethod: string;
 }): Promise<any> => {
   try {
     console.log('Sending parameters to backend:', params); // Debugging
