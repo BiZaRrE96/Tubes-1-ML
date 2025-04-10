@@ -395,16 +395,25 @@ class NNetwork:
 
                 node.bias_gradient = np.mean(error_signal[:, node_idx], axis=0)
 
-        self.update_weights(learning_rate)
+        self.update_weights(learning_rate, reg_type="L1", reg_lambda=0.01)
 
         return np.mean(loss_derivative**2)  
 
-    def update_weights(self, learning_rate: float = 0.01):
-        """Memperbarui bobot dan bias menggunakan Gradient Descent, lalu mereset gradien."""
-        for layer_idx in range(1, len(self.layers)): 
+    def update_weights(self, learning_rate: float = 0.01, reg_type: str = None, reg_lambda: float = 0.0):
+        """Update weights and biases using gradient descent with optional L1 or L2 regularization, then reset gradients."""
+        for layer_idx in range(1, len(self.layers)):
             for node in self.layers[layer_idx]:
-                if node.gradients is not None and node.bias_gradient is not None:
-                    node.weights -= learning_rate * node.gradients
-                    node.bias -= learning_rate * node.bias_gradient
+                # Calculate regularization term for weights if specified.
+                if reg_type == "L2":
+                    reg_term = reg_lambda * node.weights
+                elif reg_type == "L1":
+                    reg_term = reg_lambda * np.sign(node.weights)
+                else:
+                    reg_term = 0.0
 
+                # Update weights incorporating regularization penalty.
+                node.weights -= learning_rate * (node.gradients + reg_term)
+                node.bias -= learning_rate * node.bias_gradient
+
+                # Reset gradients after update.
                 node.reset_gradients()
