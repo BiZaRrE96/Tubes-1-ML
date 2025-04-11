@@ -22,6 +22,8 @@ cd frontend
 npm run dev
 ```
 
+# Note : Emergency.ipynb is provided for a more direct control. frontend is only able to display graph but cannot receive commands. sorry boss.
+
 ## okay that's cool, but now... who makes all this programs?
 
 to make all of this, a person's might is not enough, so this is what we did
