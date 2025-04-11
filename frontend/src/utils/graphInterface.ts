@@ -20,6 +20,19 @@ export const sendConfigToBackend = async (graph: GraphState): Promise<any> => {
   }
 };
 
+export const loadMNIST = async (): Promise<any> => {
+  try {
+    const response = await fetch('http://localhost:5000/api/load_mnist', {
+      method: 'POST',
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error loading MNIST:', error);
+  }
+};
+
+
 // Function to get graph from the backend (simulated for now)
 export const getGraphFromBackend = async (): Promise<GraphState | null> => {
   try {

@@ -1,5 +1,5 @@
 <template>
-  <div ref="el" class="node-spot">
+  <div ref="el" class="node-spot" :style="{ width: nodeSize + 'px' }">
     <Node
       v-if="savedPos && props.layer !== undefined && props.index !== undefined"
       :layer="props.layer"
@@ -33,6 +33,16 @@
   const targetPos = ref({ x: 0, y: 0 });
   const savedPos = ref(false);
   
+  const maxNodeCount = computed(() => {
+    return Math.max(...store.currentGraphState.layers.map(l => l.nodes.length));
+  });
+
+  const nodeSize = computed(() => {
+    // Adjust this logic to your screen size limits
+    const maxHeight = window.innerHeight * 0.8;
+    return Math.min(80, maxHeight / (maxNodeCount.value + 1));
+  });
+
   const updatePosition = () => {
     if (el.value) {
       const rect = el.value.getBoundingClientRect();
@@ -94,10 +104,10 @@
   </script>
 
 <style scoped>
-.node-spot {
-    width: 80px;
+  .node-spot {
     aspect-ratio: 1 / 1;
     position: relative;
     border: 1px dashed #ccc;
-}
+    margin: auto;
+  }
 </style>

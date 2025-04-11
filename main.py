@@ -22,7 +22,6 @@ def train_model(model, X_train, y_train, X_val, y_val, batch_size=32, learning_r
     """
     history = {"train_loss": [], "val_loss": []}
     num_samples = X_train.shape[0]
-
     for epoch in range(epochs):
         epoch_loss = 0
         num_batches = num_samples // batch_size
@@ -32,7 +31,7 @@ def train_model(model, X_train, y_train, X_val, y_val, batch_size=32, learning_r
         for batch_idx in batch_iterator:
             start_idx = batch_idx * batch_size
             end_idx = start_idx + batch_size
-            X_batch, y_batch = X_train[start_idx:end_idx], y_train[start_idx:end_idx]
+            X_batch, y_batch = np.array(X_train[start_idx:end_idx]), np.array([[y] for y in y_train[start_idx:end_idx]])
 
             loss = model.backward_propagation(X_batch, y_batch, learning_rate)
             epoch_loss += loss

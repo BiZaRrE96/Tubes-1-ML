@@ -1,5 +1,6 @@
 import numpy as np
 from NeuralNetwork import NNetwork
+from NN_Json_Util import nn_to_json
 
 # Inisialisasi Neural Network
 nn = NNetwork(3, [3, 4, 2], verbose=True)
