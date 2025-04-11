@@ -55,24 +55,13 @@
     <div v-for="(layer, index) in visibleLayers" :key="index">
       <details>
         <summary>
-          <!-- Input and hidden layer -->
           <strong>
             {{ index === 0 ? 'Input Layer' : `Hidden Layer ${index}` }}
           </strong>
           <button @click="graph.addNode(index)">+</button>
           <button @click="graph.popNode(index)">-</button>
-
           <span>{{ graph.getLayerNodeCount(index) }} nodes</span>
-
-          <input
-            type="number"
-            min="0"
-            :value="graph.getLayerNodeCount(index)"
-            @input="(e) => graph.setNodeCount(index, parseInt(e.target.value))"
-            style="width: 60px; margin-left: 8px;"
-          />
-      </summary>
-
+        </summary>
 
         <label>
           Activation Function:
@@ -108,6 +97,7 @@
       <details v-if="index < visibleLayers.length - 1">
         <summary>
           <strong>Bias Layer {{ index }} - {{ index + 1 }}  </strong>
+          
         </summary>
 
         <div
@@ -130,7 +120,6 @@
     <button @click="getFromBackend">Get from Backend</button>
     <button @click="importFromFile">Import from File</button>
     <button @click="exportToFile">Export to File</button>
-    <button @click="loadMNIST">Set to MNIST Dataset</button>
 
     <div v-if="verboseData">
       <h3>Verbose Data And Training History has been saved!</h3>
@@ -141,7 +130,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useGraphStore } from '@/stores/graphStore';
-import { sendConfigToBackend, getGraphFromBackend, exportGraph, importFromFile as iff, initializeWeightsOnBackend, startLearningOnBackend, loadMNIST } from '@/utils/graphInterface';
+import { sendConfigToBackend, getGraphFromBackend, exportGraph, importFromFile as iff, initializeWeightsOnBackend, startLearningOnBackend } from '@/utils/graphInterface';
 
 const graph = useGraphStore();
 const position = ref({ x: 50, y: 50 });
@@ -195,11 +184,6 @@ const updateActivation = (index: number) => {
 };
 
 // Actions for buttons
-
-const setToMNIST = async () => {
-  const result = loadMNIST()
-  console.log(result)
-}
 
 const sendToBackend = async () => {
   console.log(graph.currentGraphState);

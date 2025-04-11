@@ -150,29 +150,6 @@ export const useGraphStore = defineStore('graph', () => {
     }, 0);
   });
   
-  const setNodeCount = (layer: number, count: number) => {
-    const layerRef = currentGraphState.value.layers[layer];
-    const nextLayer = currentGraphState.value.layers[layer + 1];
-  
-    if (!layerRef) return;
-  
-    const currentCount = layerRef.nodes.length;
-  
-    if (count > currentCount) {
-      for (let i = 0; i < count - currentCount; i++) {
-        layerRef.nodes.push({
-          weights: nextLayer ? Array(nextLayer.nodes.length).fill(1.0) : [],
-          x: 0,
-          y: 0,
-        });
-      }
-    } else if (count < currentCount) {
-      layerRef.nodes.splice(count);
-    }
-  
-    adjustWeightsForLayer(layer - 1);
-  };
-  
 
 
   // Later: undo/redo support here
@@ -195,6 +172,5 @@ export const useGraphStore = defineStore('graph', () => {
     addNode,
     popNode,
     totalNodeCount,
-    setNodeCount
   };  
 });

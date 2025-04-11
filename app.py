@@ -8,13 +8,6 @@ import numpy as np
 from main import train_model, plot_training_history
 import pickle
 import os
-from sse_starlette.sse import EventSourceResponse
-import asyncio
-from sklearn.datasets import fetch_openml
-from sklearn.model_selection import train_test_split
-
-X_data : np.ndarray = 0
-y_data : np.ndarray = 0
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -73,7 +66,6 @@ def train_network():
 @app.route('/api/get_graph', methods=['GET'])
 def get_graph():
     """Send the graph data back to the frontend."""
-    global graph_data
     if graph_data is None:
         nn = NNetwork(3, [3, 4, 2], verbose=True)
         nn.initialize_weights(method="normal", mean=0, variance=0.1, seed=42, verbose=True)
@@ -88,7 +80,6 @@ def get_graph():
 @app.route('/api/export', methods=['POST'])
 def export_graph():
     """Export the current graph to a file and prompt for download."""
-    global graph_data
     try:
         if graph_data is None:
             return jsonify({'error': 'No graph data to export'}), 404
@@ -129,7 +120,6 @@ def import_graph():
 @app.route('/api/initialize_weights', methods=['POST'])
 def initialize_weights():
     """Inisialisasi bobot jaringan saraf."""
-    global graph_data
     try:
         if graph_data is None:
             return create_response('No graph data available', 404)
@@ -144,9 +134,6 @@ def initialize_weights():
 
 @app.route('/api/start_learning', methods=['POST'])
 def start_learning():
-    global X_data
-    global y_data
-    global graph_data
     try:
         data = request.get_json()
         learning_rate = data.get('learningRate', 0.01)
@@ -181,8 +168,11 @@ def start_learning():
         output_node_count = TEMP[-1]
         
         num_samples = batch_size
-        
-        X_train, X_val, y_train, y_val = train_test_split(X_data, y_data, train_size = 0.8, random_state=696969)
+        X_train = np.random.rand(num_samples, input_node_count)
+        y_train = np.random.randint(0, 2, size=(num_samples, output_node_count))
+
+        X_val = np.random.rand(num_samples, input_node_count)
+        y_val = np.random.randint(0, 2, size=(num_samples, output_node_count))
         
         if batch_size > len(X_train):
             return create_response('Batch size tidak boleh lebih besar dari jumlah data', 400)
@@ -191,19 +181,18 @@ def start_learning():
             return create_response('Jumlah sampel pada X_train dan y_train tidak sesuai', 400)
 
         # Inisialisasi model
-        # model = NNetwork(num_of_layers=hidden_layer_count + 2, layer_sizes=TEMP, activation_functions=activation_functions_list, verbose=True)
-        model = graph_data
+        model = NNetwork(num_of_layers=hidden_layer_count + 2, layer_sizes=TEMP, activation_functions=activation_functions_list, verbose=True)
         print("sudah inisiasi")
         model.initialize_weights(method=initializeWeightMethod, seed=42)
         
         # Training model
-        history = train_model(model, X_train, y_train, X_val, y_val, batch_size=1, learning_rate=learning_rate, epochs=epochs, verbose=1)
+        history = train_model(model, X_train, y_train, X_val, y_val, batch_size=batch_size, learning_rate=learning_rate, epochs=epochs, verbose=1)
         plot_training_history(history)
         
         return create_response('Learning started successfully', data=history)
     except Exception as e:
         return create_response(f"Error starting learning: {str(e)}", 400)
-
+    
 @app.route('/api/get_training_plot', methods=['GET'])
 def get_training_plot():
     """Send the training plot to the frontend."""
@@ -211,43 +200,6 @@ def get_training_plot():
         return send_file("training_history.png", mimetype='image/png', as_attachment=True)
     except Exception as e:
         return create_response(f"Error sending training plot: {str(e)}", 400)
-
-### For server to keep fe updated, turns out i dont need it?
-# @app.get("/api/sse_info")
-# async def progress_stream(request: Request):
-#     async def event_generator():
-#         for i in range(101):
-#             if await request.is_disconnected():
-#                 break
-#             yield {
-#                 "event": "progress",
-#                 "data": f"{i}"
-#             }
-#             await asyncio.sleep(0.1)
-
-#     return EventSourceResponse(event_generator())
-
-@app.route('/api/load_mnist', methods=['POST'])
-def load_mnist():
-    global X_data, y_data
-
-    try:
-        print("Loading MNIST dataset...")
-        X_data, y_data = fetch_openml("mnist_784", version=1, return_X_y=True, as_frame=False)
-        X_data = np.array(X_data) / 255
-        y_data = y_data.astype(int)
-        print(f"MNIST loaded: {X_data.shape[0]} samples")
-
-        return jsonify({
-            "status": "ok",
-            "dataset": "mnist",
-            "samples": len(X_data)
-        }), 200
-
-    except Exception as e:
-        print("Error loading MNIST:", e)
-        return jsonify({"status": "error", "message": str(e)}), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -330,7 +330,7 @@ class NNetwork:
     def backward_propagation(self, inputs: np.ndarray, targets: np.ndarray, learning_rate: float = 0.01):
         """
         Melakukan backward propagation dan memperbarui bobot menggunaka Gradient Descent."""
-        batch_size = len(inputs)
+        batch_size = inputs.shape[0]
 
         if batch_size == 0:
             raise ValueError("Batch size tidak boleh nol")
@@ -371,8 +371,8 @@ class NNetwork:
         # Backward Pass: Hitung Gradien
         errors = [None] * len(self.layers)
 
-        output_activations = np.array([x[0] for x in activations[-1]])
-        loss_derivative = output_activations - np.array(targets)
+        output_activations = activations[-1]
+        loss_derivative = output_activations - targets  
 
         if self.activation_functions[-1] == "softmax":
             errors[-1] = loss_derivative  
