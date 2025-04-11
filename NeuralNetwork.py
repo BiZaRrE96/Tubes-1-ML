@@ -327,7 +327,7 @@ class NNetwork:
 
         return current_input  
 
-    def backward_propagation(self, inputs: np.ndarray, targets: np.ndarray, learning_rate: float = 0.01):
+    def backward_propagation(self, inputs: np.ndarray, targets: np.ndarray, learning_rate: float = 0.01, reg_type = "L1"):
         """
         Melakukan backward propagation dan memperbarui bobot menggunaka Gradient Descent."""
         batch_size = inputs.shape[0]
@@ -395,7 +395,7 @@ class NNetwork:
 
                 node.bias_gradient = np.mean(error_signal[:, node_idx], axis=0)
 
-        self.update_weights(learning_rate, reg_type="L1", reg_lambda=0.01)
+        self.update_weights(learning_rate, reg_type=reg_type, reg_lambda=0.01)
 
         return np.mean(loss_derivative**2)  
 
